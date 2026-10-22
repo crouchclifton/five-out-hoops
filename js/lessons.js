@@ -14,7 +14,8 @@ const LINE = ["LC", "LW", "T", "RW", "RC"];
 // Legal passes: only to the teammate next to you (no skip passes).
 const PASSES = { T: ["LW", "RW"], LW: ["T", "LC"], RW: ["T", "RC"], LC: ["LW"], RC: ["RW"] };
 const spotWord = s => s === "T" ? "top" : (s[1] === "W" ? "wing" : "corner");
-const COLORS = ["#2563eb", "#16a34a", "#9333ea", "#0891b2", "#db2777"];
+// Our team is the Eagles: navy jerseys with orange trim. Defenders are red.
+const COLORS = ["#1e3a8a", "#1e3a8a", "#1e3a8a", "#1e3a8a", "#1e3a8a"];
 
 // After a pass from `from` to `to`, the passer cuts and every spot that opens
 // is filled by the teammate next to it (never the one holding the ball).
@@ -50,12 +51,23 @@ let lessonCoach = null;
 function resetStats() { stats = { questions: 0, firstTry: 0, combo: 0, bestCombo: 0 }; }
 
 // ---------- Drawing ----------
-function drawCourt() {
+// theme "park": Unit 1's outdoor court. "gym": Unit 2's Eagles gym, wood floor.
+function drawCourt(theme = "gym") {
   svg = $("#court");
   svg.innerHTML = "";
-  el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "#e8b26a" }, svg);
-  for (let i = 0; i < 100; i += 5) el("rect", { x: i, y: 0, width: 2.5, height: 100, fill: "#dfa75c", opacity: .55 }, svg);
-  el("rect", { x: 36, y: 63, width: 28, height: 33, fill: "#1d3557", opacity: .22 }, svg);
+  if (theme === "park") {
+    el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "#3f7d5c" }, svg);
+    // worn spots and a crack in the blacktop
+    for (const [x, y, r] of [[18, 22, 10], [82, 34, 8]]) el("circle", { cx: x, cy: y, r, fill: "#356f50", opacity: .35 }, svg);
+    el("path", { d: "M72 0 L70 8 L74 14 L71 22", stroke: "#2a5c42", "stroke-width": .5, fill: "none" }, svg);
+    el("rect", { x: 36, y: 63, width: 28, height: 33, fill: "#2b5f8a", opacity: .85 }, svg);
+  } else {
+    el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "#e8b26a" }, svg);
+    for (let i = 0; i < 100; i += 5) el("rect", { x: i, y: 0, width: 2.5, height: 100, fill: "#dfa75c", opacity: .55 }, svg);
+    el("rect", { x: 36, y: 63, width: 28, height: 33, fill: "#1e3a8a", opacity: .32 }, svg);
+    el("text", { x: 50, y: 17, "text-anchor": "middle", "font-size": 9, "font-weight": 900, fill: "#1e3a8a", opacity: .16,
+      "letter-spacing": 1.5, "font-family": "ui-rounded, system-ui, sans-serif" }, svg).textContent = "EAGLES";
+  }
   const g = el("g", { stroke: "#fff", fill: "none", "stroke-width": .7 }, svg);
   el("rect", { x: .5, y: .5, width: 99, height: 95.5 }, g);
   el("path", { d: "M38 .5 A12 12 0 0 0 62 .5" }, g);
@@ -90,7 +102,7 @@ function revealLabel(k) { const t = layers.spots.querySelector(`[data-spot="${k}
 function makePlayer(id, x, y, spot) {
   const g = el("g", {}, layers.players);
   const ring = el("circle", { r: 5.8, class: "pulse", style: "display:none" }, g);
-  el("circle", { r: 4, fill: COLORS[id - 1], stroke: "#fff", "stroke-width": .7 }, g);
+  el("circle", { r: 4, fill: COLORS[id - 1], stroke: "#f97316", "stroke-width": .8 }, g);
   el("text", { class: "ptext", y: .2 }, g).textContent = id;
   const p = { id, x, y, spot, g, ring, anim: null };
   players.push(p);
@@ -100,8 +112,8 @@ function makeDefender(p) {
   const g = el("g", {}, layers.defs);
   el("circle", { r: 3.3, fill: "#ef4444", stroke: "#7f1d1d", "stroke-width": .5 }, g);
   el("path", { d: "M-1.6 -.6 L-.4 -.1 M1.6 -.6 L.4 -.1 M-1 1.3 Q0 .6 1 1.3", stroke: "#fff", "stroke-width": .45, fill: "none", "stroke-linecap": "round" }, g);
-  const zz = el("text", { class: "zz", x: 3.2, y: -3 }, g);
-  zz.textContent = "💤";
+  const zz = el("text", { class: "zz", x: 3.4, y: -3.2 }, g);
+  zz.innerHTML = '<tspan font-size="2.2">z</tspan><tspan dy="-1.3" font-size="2.9">z</tspan><tspan dy="-1.5" font-size="3.6">Z</tspan>';
   const t = defTarget({ p, mode: "guard" });
   const d = { p, x: t.x, y: t.y, mode: "guard", fixed: null, g, zz };
   defenders.push(d);
@@ -182,7 +194,7 @@ function emptyMarker(spot) {
   el("text", { x: s.x, y: s.y, class: "qmark" }, g).textContent = "?";
   return g;
 }
-function setScore() { $("#score").textContent = "🏀 " + points; $("#score").style.display = points ? "" : "none"; }
+function setScore() { $("#score").innerHTML = icon("ball") + points; $("#score").style.display = points ? "" : "none"; }
 function setProgress(done, total) { $("#barFill").style.width = Math.round(100 * done / total) + "%"; }
 
 const PRAISE = ["Nice!", "Awesome!", "You got it!", "Great read!", "Boom!", "Yes!", "Sweet!", "Perfect!"];
@@ -232,9 +244,11 @@ function askTap({ text, zones = [], buttons = [], check }) {
             stats.combo++;
             stats.bestCombo = Math.max(stats.bestCombo, stats.combo);
             if (readPoints) { points++; setScore(); }
+            challenge("read", 1);
+            challenge("combo", stats.combo);
           }
           flashPanel("right");
-          if (!missed && stats.combo >= 3 && stats.combo % 2 === 1) { sfx("combo"); praise(`🔥 ${stats.combo} in a row!`, true); }
+          if (!missed && stats.combo >= 3 && stats.combo % 2 === 1) { sfx("combo"); praise(`${icon("flame")} ${stats.combo} in a row!`, true); }
           else if (!missed && readPoints) { sfx("good"); praise("+1 Great read!"); }
           else { sfx("good"); praise(pick(PRAISE)); }
           lessonCoach.flash("happy", 1100);
@@ -246,7 +260,7 @@ function askTap({ text, zones = [], buttons = [], check }) {
         sfx("bad");
         flashPanel("wrong");
         lessonCoach.mood("oops");
-        say("🤔 " + r.msg, true);
+        say(r.msg, true);
       }
     };
     layers.zones.innerHTML = "";
@@ -324,10 +338,10 @@ async function possession(o = {}) {
       await askTap({
         text: `#${holder.id}, you have the ball! Is your defender in the way? <b>Drive</b> or <b>pass</b>?`,
         zones: [{ key: "drive", x: HOOP.x, y: HOOP.y - 4, r: 7, glow: true }],
-        buttons: [{ key: "drive", label: "🏃 Drive!" }, { key: "pass", label: "🤝 Pass" }],
+        buttons: [{ key: "drive", label: `${icon("drive")} Drive!` }, { key: "pass", label: `${icon("passBtn")} Pass` }],
         check: k => drive === "open"
           ? (k === "drive" ? OK : { ok: false, msg: zzz
-            ? "Look! Your defender is sleeping 💤 and NOT in the way. Rule #1: <b>attack the basket!</b>"
+            ? "Look! Your defender is sleeping and NOT in the way. Rule #1: <b>attack the basket!</b>"
             : "Look! Your defender is off to the side, NOT between you and the hoop. Rule #1: <b>attack the basket!</b>" })
           : (k === "pass" ? OK : { ok: false, msg: "Your defender is standing between you and the hoop. <b>Pass it</b> to a teammate!" }),
       });
@@ -336,11 +350,11 @@ async function possession(o = {}) {
     }
     if (drive === "open") {
       await driveAndScore(holder);
-      await Promise.all([N ? say("Rule #1: <b>Attack the basket</b> when you can! 🏀") : null, resetAfterScore()]);
+      await Promise.all([N ? say("Rule #1: <b>Attack the basket</b> when you can!") : null, resetAfterScore()]);
       await sleep(0);
       return "score";
     }
-    if (o.askDrive) await talk("✅ Smart! The defender is in the way, so we pass.");
+    if (o.askDrive) await talk(" Smart! The defender is in the way, so we pass.");
   }
 
   // 2. Pass to a teammate next to you.
@@ -373,7 +387,7 @@ async function possession(o = {}) {
       text: tapOnly ? `Nice pass! Where should #${holder.id} go now? <b>Tap it on the court.</b>` : `Nice pass! Now what should #${holder.id} do?`,
       zones: [{ key: "cut", x: HOOP.x, y: HOOP.y - 6, r: 8, glow: !tapOnly },
         ...(tapOnly ? players.map(p => ({ key: p === holder ? "stay" : "mate", x: p.x, y: p.y })) : [])],
-      buttons: tapOnly ? [] : [{ key: "stay", label: "🧍 Stand still" }, { key: "cut", label: "🏃 Cut to the hoop!" }],
+      buttons: tapOnly ? [] : [{ key: "stay", label: `${icon("stop")} Stand still` }, { key: "cut", label: `${icon("cutBtn")} Cut to the hoop!` }],
       check: k => k === "cut" ? OK
         : k === "mate" ? { ok: false, msg: "A teammate is already there. After you pass, cut to the <b>hoop</b>!" }
         : { ok: false, msg: "Rule #2: <b>Pass and MOVE!</b> Never stand still after you pass. Cut to the hoop!" },
@@ -387,7 +401,7 @@ async function possession(o = {}) {
   // An open cutter gets in front; the defender trails a step behind.
   if (cd && open) cd.mode = "lag";
   const cp = cutPoint(from);
-  const cutLine = !o.askCut && (N || o.narratePass) ? say(`Pass and cut! #${holder.id} cuts to the hoop. ✂️`) : null;
+  const cutLine = !o.askCut && (N || o.narratePass) ? say(`Pass and cut! #${holder.id} cuts to the hoop.`) : null;
   await moveTo(cutter, cp.x, cp.y, 40);
   if (cutLine) { await cutLine; await sleep(0); }
 
@@ -399,10 +413,10 @@ async function possession(o = {}) {
       await askTap({
         text: `#${cutter.id} is cutting! Is #${cutter.id} <b>open</b>?`,
         zones: [{ key: "pass", x: cutter.x, y: cutter.y, r: 6, glow: true }],
-        buttons: [{ key: "pass", label: `🎯 Pass to #${cutter.id}` }, { key: "hold", label: "✋ Not open" }],
+        buttons: [{ key: "pass", label: `${icon("passBtn")} Pass to #${cutter.id}` }, { key: "hold", label: `${icon("stop")} Not open` }],
         check: k => open
           ? (k === "pass" ? OK : { ok: false, msg: zzz
-            ? `Look! #${cutter.id}'s defender is sleeping 💤 way back. #${cutter.id} is OPEN. Pass it back!`
+            ? `Look! #${cutter.id}'s defender is sleeping way back. #${cutter.id} is OPEN. Pass it back!`
             : `Look! #${cutter.id} got <b>in front</b> of the defender. Nothing is between #${cutter.id} and the hoop. Pass it back!` })
           : (k === "hold" ? OK : { ok: false, msg: `The defender is right with #${cutter.id}. Not open! Hold the ball.` }),
       });
@@ -410,10 +424,10 @@ async function possession(o = {}) {
       await talk(open ? `#${cutter.id} beat the defender! Pass it back!` : `#${cutter.id} is covered. No pass this time.`);
     }
     if (open) {
-      await Promise.all([say("🎯 <b>Give and go!</b>"), passBall(cutter).then(() => layup(cutter))]);
+      await Promise.all([say(" <b>Give and go!</b>"), passBall(cutter).then(() => layup(cutter))]);
       scored = true;
     } else if (o.askGiveGo) {
-      await talk("✅ Good eyes! Not open, so we keep moving.");
+      await talk(" Good eyes! Not open, so we keep moving.");
     }
   } else {
     await sleep(N ? 900 : 300);
@@ -432,7 +446,7 @@ async function possession(o = {}) {
         check: k => {
           if (k === String(filler.id)) return OK;
           if (ball.holder && String(ball.holder.id) === k) return { ok: false, msg: "That teammate has the ball! Pick the one <b>right next to</b> the empty spot." };
-          return { ok: false, msg: "Pick the teammate <b>right next to</b> the empty spot. 👀" };
+          return { ok: false, msg: "Pick the teammate <b>right next to</b> the empty spot." };
         },
       });
       mark.remove();
@@ -449,7 +463,7 @@ async function possession(o = {}) {
     cutter.spot = rot.dest;
     await moveTo(cutter, SPOTS[rot.dest].x, SPOTS[rot.dest].y);
   } else {
-    const line = (N || o.narrateFill) ? say(rot.fills.length ? "Everyone <b>fills the open spot</b> next to them! 🔄" : `#${cutter.id} comes right back to the corner.`) : null;
+    const line = (N || o.narrateFill) ? say(rot.fills.length ? "Everyone <b>fills the open spot</b> next to them!" : `#${cutter.id} comes right back to the corner.`) : null;
     const moves = [];
     let delay = 0;
     for (const [a, b] of rot.fills) {
@@ -472,24 +486,24 @@ async function possession(o = {}) {
 // ---------- The lessons ----------
 // `game` is the bonus game a lesson unlocks (see js/minigames.js).
 const LESSONS = [
-  { title: "Find the Spots", emoji: "📍", game: "swish", run: lesson1,
+  { title: "Find the Spots", glyph: "spots", game: "swish", run: lesson1,
     blurb: "Learn the 5 spots: the top, 2 wings and 2 corners." },
-  { title: "Pass & Cut", emoji: "✂️", game: "passpop", run: lesson2,
+  { title: "Pass & Cut", glyph: "cut", game: "passpop", run: lesson2,
     blurb: "After you pass, don't stand still. Cut to the hoop!" },
-  { title: "Fill the Spot", emoji: "🧩", game: "freethrow", run: lesson3,
+  { title: "Fill the Spot", glyph: "fill", game: "freethrow", run: lesson3,
     blurb: "When a spot opens up, the teammate next to it slides over." },
-  { title: "Give & Go", emoji: "🎯", game: "dribble", run: lesson4,
+  { title: "Give & Go", glyph: "givego", game: "dribble", run: lesson4,
     blurb: "Pass, cut, and look. Is the cutter open?" },
-  { title: "Attack!", emoji: "⚡", game: null, run: lesson5,
+  { title: "Attack!", glyph: "attack", game: null, run: lesson5,
     blurb: "If your defender is not in the way, drive to the hoop!" },
-  { title: "Big Game", emoji: "🏆", game: null, run: lesson6,
+  { title: "Big Game", glyph: "cup", game: null, run: lesson6,
     blurb: "Use all 3 rules. Every smart read scores a point!" },
 ];
 
 async function lesson1() {
   drawSpots({ labels: false, decoys: true });
-  await next("5-Out has <b>3 rules</b>. Rule #1: <b>attack the basket</b>. Rule #2: <b>pass and move</b>. Rule #3: <b>fill the open spot</b>. You'll learn them all!", "Cool! 👍");
-  await next("In 5-Out, there are <b>5 spots</b>, all <b>outside</b> the big curved line. Let's find them!", "Let's go! 🏀");
+  await next("5-Out has <b>3 rules</b>. Rule #1: <b>attack the basket</b>. Rule #2: <b>pass and move</b>. Rule #3: <b>fill the open spot</b>. You'll learn them all!", "Cool!");
+  await next("In 5-Out, there are <b>5 spots</b>, all <b>outside</b> the big curved line. Let's find them!", "Let's go!");
   const isRight = (k, q) => q === "T" ? k === "T" : q === "W" ? (k === "LW" || k === "RW") : (k === "LC" || k === "RC");
   const word = { T: "TOP", W: "WING", C: "CORNER" };
   const ASK_SPOT = { T: "Tap the <b>TOP</b> spot.", W: "Tap a <b>WING</b> spot.", C: "Tap a <b>CORNER</b> spot." };
@@ -542,12 +556,12 @@ async function lesson1() {
   setProgress(1, 1);
   floatText(50, 50, "SPREAD OUT!");
   sfx("swish");
-  await next("1 top, 2 wings, 2 corners. That's the <b>5-Out</b>! 🙌", "Finish ⭐");
+  await next("1 top, 2 wings, 2 corners. That's the <b>5-Out</b>!", `Finish ${icon("star")}`);
 }
 
 async function lesson2() {
   drawSpots(); setupFive(false);
-  await next("Rule #2: <b>Pass and MOVE!</b> After you pass, don't stand still. Cut to the hoop!", "Let's go! 🏀");
+  await next("Rule #2: <b>Pass and MOVE!</b> After you pass, don't stand still. Cut to the hoop!", "Let's go!");
   const rounds = 5;
   for (let i = 0; i < rounds; i++) {
     setProgress(i, rounds);
@@ -556,12 +570,12 @@ async function lesson2() {
     await possession({ askPass: true, askCut: i < 2 ? true : "tap", narrateFill: true });
   }
   setProgress(1, 1);
-  await next("You did it! Pass, then <b>cut</b>! ✂️", "Finish ⭐");
+  await next("You did it! Pass, then <b>cut</b>!", `Finish ${icon("star")}`);
 }
 
 async function lesson3() {
   drawSpots(); setupFive(false);
-  await next("Rule #3: <b>Fill the open spot!</b> When a teammate cuts, their spot is empty. The teammate <b>next to it</b> slides over.", "Let's go! 🏀");
+  await next("Rule #3: <b>Fill the open spot!</b> When a teammate cuts, their spot is empty. The teammate <b>next to it</b> slides over.", "Let's go!");
   const rounds = 4;
   let r = 0;
   while (r < rounds) {
@@ -575,7 +589,7 @@ async function lesson3() {
     r++;
   }
   setProgress(1, 1);
-  await next("Awesome! Everyone moves over <b>one spot</b> to fill the hole. 🧩", "Finish ⭐");
+  await next("Awesome! Everyone moves over <b>one spot</b> to fill the hole.", `Finish ${icon("star")}`);
 }
 
 // The 💤 helps at first, then goes away: on a real court, players read where the defender stands.
@@ -583,7 +597,7 @@ const NO_MORE_ZZZ = "From now on, no sleepy faces! Look at <b>where</b> the defe
 
 async function lesson4() {
   drawSpots(); setupFive(true);
-  await next("Pass and cut, then <b>look</b>! If the cutter gets past their defender, pass it right back for a layup. That's a <b>give and go</b>! 🎯", "Let's go! 🏀");
+  await next("Pass and cut, then <b>look</b>! If the cutter gets past their defender, pass it right back for a layup. That's a <b>give and go</b>!", "Let's go!");
   const plan = shuffle([true, false, true]).concat(shuffle([false, true, false]));
   for (let i = 0; i < plan.length; i++) {
     setProgress(i, plan.length);
@@ -591,12 +605,12 @@ async function lesson4() {
     await possession({ askPass: true, giveGo: plan[i], askGiveGo: true, hideZ: i >= 3 });
   }
   setProgress(1, 1);
-  await next("You can spot an open cutter! 👀", "Finish ⭐");
+  await next("You can spot an open cutter!", `Finish ${icon("star")}`);
 }
 
 async function lesson5() {
   drawSpots(); setupFive(true);
-  await next("Rule #1: <b>Attack the basket!</b> If your defender is NOT between you and the hoop, drive and score!", "Let's go! 🏀");
+  await next("Rule #1: <b>Attack the basket!</b> If your defender is NOT between you and the hoop, drive and score!", "Let's go!");
   const plan = shuffle(["open", "blocked", "open"]).concat(shuffle(["blocked", "open", "blocked"]));
   for (let i = 0; i < plan.length; i++) {
     setProgress(i, plan.length);
@@ -606,12 +620,12 @@ async function lesson5() {
     await possession({ drive: plan[i], askDrive: true, askPass: true, hideZ: i >= 3 });
   }
   setProgress(1, 1);
-  await next("You know when to attack! ⚡", "Finish ⭐");
+  await next("You know when to attack!", `Finish ${icon("star")}`);
 }
 
 async function lesson6() {
   drawSpots(); setupFive(true);
-  await next("Big Game! Use all 3 rules: <b>attack</b>, <b>pass and move</b>, and <b>fill the spot</b>. Every smart read is <b>1 point</b>, and baskets are <b>2</b>!", "Tip off! 🏀");
+  await next("Big Game! Use all 3 rules: <b>attack</b>, <b>pass and move</b>, and <b>fill the spot</b>. Every smart read is <b>1 point</b>, and baskets are <b>2</b>!", "Tip off!");
   readPoints = true;
   const turns = 6;
   for (let i = 0; i < turns; i++) {
@@ -621,7 +635,7 @@ async function lesson6() {
   }
   readPoints = false;
   setProgress(1, 1);
-  await next(`Game over! You scored <b>${points} points</b>! 🏆`, "Finish ⭐");
+  await next(`Game over! You scored <b>${points} points</b>!`, `Finish ${icon("star")}`);
 }
 
 async function watchOffense() {

@@ -135,37 +135,78 @@ function unlockAudio() {
 }
 ["touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true }));
 
-// ---------- Save data ----------
-const save = Object.assign(
-  { stars: {}, xp: 0, streak: 0, lastDay: null, best: {}, medals: {}, unlockAll: false, seenGames: {},
-    cards: {}, newCards: [], packs: 0, sinceLegend: 0 },
-  JSON.parse(localStorage.getItem("fiveout-save") || "{}"));
+// ---------- Players and save data ----------
+// Each player on this phone is a look (face, jersey, number; never a name) with
+// a save of their own. Everything stays in this phone's storage: the game has
+// no server and sends nothing anywhere.
+const profiles = Object.assign({ list: [], current: null }, JSON.parse(localStorage.getItem("fiveout-profiles") || "{}"));
+function saveProfiles() { localStorage.setItem("fiveout-profiles", JSON.stringify(profiles)); }
+// Saves from before players existed become player 1, who picks a look next.
+if (!profiles.list.length && (localStorage.getItem("fiveout-save") || localStorage.getItem("fiveout-stars"))) {
+  profiles.list.push({ id: "p1", look: null });
+  profiles.current = "p1";
+  localStorage.setItem("fiveout-save-p1", localStorage.getItem("fiveout-save") || "{}");
+  localStorage.removeItem("fiveout-save");
+  saveProfiles();
+}
+let saveKey = profiles.current ? "fiveout-save-" + profiles.current : null;
+const SAVE_DEFAULTS = () => ({ stars: {}, xp: 0, streak: 0, lastDay: null, best: {}, medals: {}, unlockAll: false, seenGames: {},
+  cards: {}, newCards: [], packs: 0, sinceLegend: 0, bags: {}, days: [], restDays: [], passes: 1, daily: null, cheered: {} });
+const save = Object.assign(SAVE_DEFAULTS(), JSON.parse((saveKey && localStorage.getItem(saveKey)) || "{}"));
 // Stars from the first version of the game.
 const oldStars = JSON.parse(localStorage.getItem("fiveout-stars") || "null");
 if (oldStars && !Object.keys(save.stars).length) save.stars = oldStars;
-function persist() { localStorage.setItem("fiveout-save", JSON.stringify(save)); }
-function addXP(n) { save.xp += n; persist(); }
+localStorage.removeItem("fiveout-stars");
+function persist() { if (saveKey) localStorage.setItem(saveKey, JSON.stringify(save)); }
+let onXP = null; // the daily challenges listen here (js/rewards.js)
+function addXP(n) { save.xp += n; persist(); if (onXP) onXP(n); }
+
+// ---------- Days and the streak ----------
 const dayKey = d => d.toLocaleDateString("en-CA");
-// Yesterday by the calendar, not "24 hours ago", so a daylight saving day can't break a streak.
-const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
-// Counts a day of play (a lesson or a bonus game). Returns true the first time it's called on a new day.
+const dayNum = key => { const [y, m, d] = key.split("-").map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+const numDay = n => new Date(n * 864e5).toISOString().slice(0, 10);
+const today = () => dayKey(new Date());
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
+const MAX_PASSES = 2;
+// Counts a day of play (a lesson or a bonus game). The first time on a new day it
+// returns what happened: { streak, used (Rest Day Passes spent), milestone }.
+// A missed day is covered by a Rest Day Pass, if the player has one.
 function touchStreak() {
-  const today = dayKey(new Date());
-  if (save.lastDay === today) return false;
-  save.streak = save.lastDay === yesterday() ? save.streak + 1 : 1;
-  save.lastDay = today;
+  const t = today();
+  if (save.lastDay === t) return null;
+  const gap = save.lastDay ? dayNum(t) - dayNum(save.lastDay) : 1;
+  let used = 0;
+  if (gap === 1) save.streak++;
+  else if (gap > 1 && gap - 1 <= save.passes) {
+    used = gap - 1;
+    save.passes -= used;
+    for (let i = 1; i < gap; i++) save.restDays.push(numDay(dayNum(save.lastDay) + i));
+    save.streak++;
+  } else save.streak = 1;
+  save.lastDay = t;
+  save.days.push(t);
+  save.days = save.days.slice(-60); save.restDays = save.restDays.slice(-30);
+  const milestone = STREAK_MILESTONES.includes(save.streak);
+  // Every milestone after the first earns a Rest Day Pass.
+  if (milestone && save.streak >= 7) save.passes = Math.min(MAX_PASSES, save.passes + 1);
   persist();
-  return true;
+  return { streak: save.streak, used, milestone };
 }
-// The streak shown on the home screen: still alive if they played today or yesterday.
+// The streak shown on the home screen: alive if they played today or yesterday,
+// or if their Rest Day Passes can cover the days they missed.
 function liveStreak() {
-  return (save.lastDay === dayKey(new Date()) || save.lastDay === yesterday()) ? save.streak : 0;
+  if (!save.lastDay) return 0;
+  const missed = dayNum(today()) - dayNum(save.lastDay) - 1;
+  return missed <= save.passes ? save.streak : 0;
 }
 
+// Paper confetti in Eagles colors, with a few little basketballs.
 function confetti() {
-  const bits = ["🏀", "⭐", "🎉", "✨", "🔥"];
-  for (let i = 0; i < 28; i++) {
-    const c = html("div", "confetti", document.body, pick(bits));
+  const colors = ["#f97316", "#1e3a8a", "#ffc800", "#ffffff", "#58cc02", "#1cb0f6"];
+  for (let i = 0; i < 34; i++) {
+    const ballBit = i % 7 === 0;
+    const c = html("div", "confetti" + (ballBit ? " ball" : ""), document.body, ballBit ? icon("ball") : "");
+    if (!ballBit) { c.style.background = colors[i % colors.length]; c.style.width = 7 + Math.random() * 6 + "px"; c.style.height = 10 + Math.random() * 8 + "px"; }
     c.style.left = Math.random() * 100 + "vw";
     c.style.animationDuration = 1.8 + Math.random() * 1.8 + "s";
     c.style.animationDelay = Math.random() * .6 + "s";

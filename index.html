@@ -27,21 +27,23 @@
 <!-- HOME: the lesson path -->
 <div id="home" class="screen light">
   <div class="topbar">
-    <div class="logo">🏀 5-Out Hoops</div>
-    <div class="stat fire" id="streakStat">🔥 0</div>
-    <div class="stat xp" id="xpStat">⭐ 0</div>
-    <button class="stat cardsbtn" id="cardsBtn" aria-label="Card Binder">🃏 0</button>
-    <button class="iconbtn soundbtn" aria-label="Sound">🔊</button>
+    <button class="me-btn" id="meBtn" aria-label="Who's playing?"></button>
+    <div class="logo">5-Out <span>Hoops</span></div>
+    <div class="stat fire" id="streakStat"></div>
+    <div class="stat xp" id="xpStat"></div>
+    <button class="stat cardsbtn" id="cardsBtn" aria-label="Card Binder"></button>
+    <button class="iconbtn soundbtn" aria-label="Sound"></button>
   </div>
   <div id="pathScroll">
     <div class="hero">
       <button id="heroCoachBtn" class="coach-btn" aria-label="Coach Bounce" style="background:none;border:0;padding:0;width:104px;height:116px"></button>
       <div class="bubble" id="heroBubble"></div>
     </div>
+    <div id="dailyBox"></div>
     <div class="path" id="path"></div>
     <div class="home-foot">
-      <button class="btn gold wide hidden" id="installBtn">📲 Add to Home Screen</button>
-      <button class="btn ghost wide" id="watchBtn">👀 Watch the 5-Out</button>
+      <button class="btn gold wide hidden" id="installBtn">Add to Home Screen</button>
+      <button class="btn ghost wide" id="watchBtn">Watch the 5-Out</button>
       <button class="linkbtn" id="notesBtn">For coaches and parents</button>
     </div>
   </div>
@@ -52,9 +54,9 @@
   <div class="lesson-top">
     <button class="iconbtn" id="quitBtn" aria-label="Quit">✕</button>
     <div class="bar" id="bar"><div id="barFill"></div></div>
-    <div class="title hidden" id="lessonTitle">👀 Watch the 5-Out</div>
-    <div class="pill" id="score">🏀 0</div>
-    <button class="iconbtn soundbtn" aria-label="Sound">🔊</button>
+    <div class="title hidden" id="lessonTitle">Watch the 5-Out</div>
+    <div class="pill" id="score"></div>
+    <button class="iconbtn soundbtn" aria-label="Sound"></button>
   </div>
   <div id="main">
     <div id="courtWrap"><svg id="court" viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet"></svg></div>
@@ -68,13 +70,10 @@
   </div>
 </div>
 
-<!-- LESSON COMPLETE -->
-<div id="complete" class="screen celebrate hidden">
-  <div id="doneCoach" style="width:150px;height:168px"></div>
-  <h2 id="completeTitle">Lesson complete!</h2>
-  <div class="cards" id="completeCards"></div>
-  <p id="completeMsg"></p>
-  <div class="actions"><button class="btn green wide" id="completeNext">Continue</button></div>
+<!-- REWARD STEPS: stars, XP, streak (js/rewards.js) -->
+<div id="step" class="screen celebrate hidden">
+  <div id="stepCoach" style="width:130px;height:146px"></div>
+  <div id="stepBody"></div>
 </div>
 
 <!-- REWARD -->
@@ -93,12 +92,31 @@
 <div id="binder" class="screen hidden">
   <div class="lesson-top">
     <button class="iconbtn" id="binderClose" aria-label="Back">✕</button>
-    <div class="title">🃏 My Card Binder</div>
+    <div class="title" id="binderTitle">My Card Binder</div>
     <div class="pill" id="binderCount">0 / 24</div>
-    <button class="iconbtn soundbtn" aria-label="Sound">🔊</button>
+    <button class="iconbtn soundbtn" aria-label="Sound"></button>
   </div>
   <div id="binderScroll"><div id="binderGrid"></div>
     <p class="binder-foot">Earn card packs by finishing lessons, winning bonus game medals and keeping your streak. Extra copies turn into XP!</p></div>
+</div>
+
+<!-- WHO'S PLAYING? -->
+<div id="players" class="screen hidden">
+  <div class="lesson-top">
+    <button class="iconbtn" id="playersClose" aria-label="Back">✕</button>
+    <div class="title">Who's playing?</div>
+  </div>
+  <div class="scrollbody" id="playersBody"></div>
+</div>
+
+<!-- MAKE YOUR PLAYER -->
+<div id="maker" class="screen hidden">
+  <div class="lesson-top">
+    <button class="iconbtn" id="makerBack" aria-label="Back">✕</button>
+    <div id="makerCoach" style="width:46px;height:52px;flex:none"></div>
+    <div class="title">Make your player</div>
+  </div>
+  <div class="scrollbody" id="makerBody"></div>
 </div>
 
 <!-- BONUS GAME -->
@@ -109,7 +127,7 @@
     <div class="pill" id="miniHudA"></div>
     <div class="spacer"></div>
     <div class="pill" id="miniHudB"></div>
-    <button class="iconbtn soundbtn" aria-label="Sound">🔊</button>
+    <button class="iconbtn soundbtn" aria-label="Sound"></button>
   </div>
   <div id="miniOverlay" class="overlay hidden"></div>
 </div>
@@ -118,6 +136,7 @@
 <div id="notes" class="screen hidden">
   <div class="card2">
     <h2>For coaches and parents</h2>
+    <p class="credit">Made by Coach Clifton for his Eagles team in the Southern Madison Future Eagles league, so players can learn the offense at home. It's a team project, not an official league app.</p>
     <p>This game teaches the basics of the <b>5-Out motion offense</b>, following Coach Russ's video
       <a href="https://youtu.be/PiR6-4Erhjw" target="_blank" rel="noopener">"5-Out Motion Offense: A Complete Guide for Coaches"</a>.</p>
     <p><b>Setup:</b> all five players start outside the 3-point line. One at the top, two on the wings, two in the corners. It is positionless, so anyone can start anywhere.</p>
@@ -131,18 +150,23 @@
     </table>
     <p><b>How it plays:</b> six lessons on a path, each unlocking the next. Lessons 1 to 4 each unlock a bonus game (Swish Shot, Pass Pop, Free Throw Frenzy, Dribble Dash), and lessons 5 and 6 let players pick one. Players earn XP, stars and a daily streak (a lesson or a bonus game keeps it going). Every lesson, bonus game medal and streak milestone also earns basketball cards of made-up cartoon players, collected in the Card Binder; extra copies turn into XP. There are no lives to lose, so nobody gets stopped out. "Watch the 5-Out" plays the offense by itself with narration, good for a team huddle around one phone.</p>
     <p><b>Left out on purpose</b> for 7 to 9 year olds: screens away, on-ball screens, backdoor cuts and post seals. The video covers them once the basic movement is solid. Skip passes (top to corner, wing to wing) count as mistakes, to build the habit of passing to the teammate next to you.</p>
-    <label><input type="checkbox" id="unlockAll"> Unlock every lesson and bonus game on this phone</label>
-    <button class="btn ghost wide" id="resetBtn" style="margin-bottom:12px">Reset progress on this phone</button>
+    <p><b>Players and privacy:</b> each player is a face, a jersey and a number. No names are asked for. Players and their progress are saved only on this phone; the game has no server and sends nothing anywhere. To start one player over, tap the player in the top left corner of the home screen.</p>
+    <label><input type="checkbox" id="unlockAll"> Unlock every lesson and bonus game for this player</label>
+    <button class="btn ghost wide" id="resetBtn" style="margin-bottom:12px">Erase every player on this phone</button>
     <button class="btn wide" id="notesClose">Close</button>
   </div>
 </div>
 
 <script src="voice/manifest.js"></script>
 <script src="js/core.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/coach.js"></script>
 <script src="js/lessons.js"></script>
 <script src="js/minigames.js"></script>
 <script src="js/cards.js"></script>
+<script src="js/cast.js"></script>
+<script src="js/rewards.js"></script>
+<script src="js/profiles.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

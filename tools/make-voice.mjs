@@ -25,8 +25,9 @@ const core = read("js/core.js");
 const grab = name => core.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n}\\n`))[0];
 const { cleanSpeech, voiceKey } = new Function(`${grab("cleanSpeech")}${grab("voiceKey")}return { cleanSpeech, voiceKey };`)();
 
-// Spoken text lives in these files.
-const code = ["js/lessons.js", "js/minigames.js", "js/app.js", "js/cards.js"].map(read).join("\n");
+// Spoken text can be in any game script (icons.js is only drawings, core.js only code).
+const code = fs.readdirSync(path.join(root, "js")).filter(f => f.endsWith(".js") && !["icons.js", "core.js"].includes(f)).sort()
+  .map(f => read("js/" + f)).join("\n");
 
 // Values that can fill each ${...} in a spoken template.
 const ids = ["1", "2", "3", "4", "5"];

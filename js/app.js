@@ -1,22 +1,29 @@
 "use strict";
-// Screens and flow: the lesson path, lesson complete, rewards, bonus games, coach notes.
+// Screens and flow: the lesson path, rewards, bonus games, players, coach notes.
 
-const SCREENS = ["home", "game", "complete", "reward", "mini", "notes", "pack", "binder"];
+const SCREENS = ["home", "game", "step", "reward", "mini", "notes", "pack", "binder", "players", "maker"];
 const show = id => SCREENS.forEach(s => $("#" + s).classList.toggle("hidden", s !== id));
+// Each unit has its own color and court: Unit 1 outside, Unit 2 in the Eagles gym.
 const UNITS = [
-  { title: "Unit 1: The 5-Out", sub: "Spots, cuts and filling", lessons: [0, 1, 2] },
-  { title: "Unit 2: Read the Defense", sub: "Give and go, attack, big game", lessons: [3, 4, 5] },
+  { title: "Unit 1: The 5-Out", sub: "Outdoor court: spots, cuts and filling", lessons: [0, 1, 2], color: "#f97316", dark: "#c2410c", court: "park" },
+  { title: "Unit 2: Read the Defense", sub: "Eagles Gym: give and go, attack, big game", lessons: [3, 4, 5], color: "#1e3a8a", dark: "#172554", court: "gym" },
 ];
+const unitOf = i => UNITS.find(u => u.lessons.includes(i));
 const ZIGZAG = [0, -70, -100, -70, 0, 70, 100, 70];
 const TIPS = [
   "Remember: pass and move! Never stand still.",
   "Spread out! Stay outside the big line.",
-  "If your defender is sleeping, attack the basket!",
+  "If your defender is not in the way, attack the basket!",
   "When a spot opens up, fill it!",
   "Look for the open cutter. Give and go!",
 ];
+// Small drawings for the unit banners: a park hoop, and the Eagles mascot's face.
+const UNIT_ART = [
+  `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M30 46V14" stroke="#1e293b" stroke-width="3.5"/><rect x="12" y="5" width="30" height="20" rx="2" fill="#fff" stroke="#1e293b" stroke-width="2.5"/><rect x="20" y="12" width="14" height="9" fill="none" stroke="#ef4444" stroke-width="2"/><ellipse cx="24" cy="25" rx="8" ry="2.5" fill="none" stroke="#ea580c" stroke-width="3"/><path d="M17 26l3 9M24 27v9M31 26l-3 9" stroke="#fff" stroke-width="1.6"/></svg>`,
+  EAGLE_SVG.replace('viewBox="0 0 100 110"', 'viewBox="24 10 52 54"'),
+];
 
-let homeCoach, doneCoach, rewardCoach;
+let homeCoach, rewardCoach;
 
 const isUnlocked = i => save.unlockAll || i === 0 || (save.stars[i - 1] || 0) > 0;
 const lessonOfGame = id => LESSONS.findIndex(l => l.game === id);
@@ -31,7 +38,7 @@ function stopRun() {
   miniGame = null;
 }
 
-function renderSound() { document.querySelectorAll(".soundbtn").forEach(b => b.textContent = soundOn ? "🔊" : "🔇"); }
+function renderSound() { document.querySelectorAll(".soundbtn").forEach(b => b.innerHTML = icon(soundOn ? "soundOn" : "soundOff")); }
 function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem("fiveout-sound", soundOn ? "on" : "off");
@@ -57,17 +64,21 @@ function renderHome(greet = true) {
   show("home");
   setActiveCoach(homeCoach);
   homeCoach.mood("idle");
+  const me = currentPlayer();
+  $("#meBtn").innerHTML = me && me.look ? avatarSVG(me.look, { head: true }) : icon("plus");
   const streak = liveStreak();
-  $("#streakStat").innerHTML = `🔥 ${streak}`;
+  $("#streakStat").innerHTML = icon(streak ? "flame" : "flameOff") + streak;
   $("#streakStat").classList.toggle("dim", !streak);
-  $("#xpStat").innerHTML = `⭐ ${save.xp}`;
-  $("#cardsBtn").innerHTML = `🃏 ${ownedCount()}`;
+  $("#xpStat").innerHTML = icon("star") + save.xp;
+  $("#cardsBtn").innerHTML = icon("cards") + ownedCount();
   $("#cardsBtn").classList.toggle("has-new", save.newCards.length > 0);
   const doneCount = LESSONS.filter((_, i) => save.stars[i]).length;
   // Always refresh the greeting; only say it out loud when asked to.
-  heroSay(doneCount === 0 ? "Hi! I'm Coach Bounce! Tap the green circle to start your first lesson!"
+  heroSay(doneCount === 0 ? "Hi! I'm Coach Bounce! Welcome to the Eagles! Tap the glowing circle to start your first lesson!"
     : doneCount === LESSONS.length ? "You finished every lesson! Play the bonus games anytime!"
     : "Welcome back! Let's keep learning the 5-Out!", greet);
+  $("#dailyBox").innerHTML = "";
+  challengeList($("#dailyBox"));
   const current = LESSONS.findIndex((_, i) => !save.stars[i]);
   const path = $("#path");
   path.innerHTML = "";
@@ -76,34 +87,50 @@ function renderHome(greet = true) {
     const r = html("div", "node-row" + (small ? " small" : ""), path);
     // Shift the circle, not the full-width row: a shifted row hangs off the side
     // of the screen and lets the path wobble sideways while scrolling.
-    r.style.setProperty("--x", ZIGZAG[z++ % ZIGZAG.length] + "px");
+    const x = ZIGZAG[z++ % ZIGZAG.length];
+    r.style.setProperty("--x", x + "px");
+    r.dataset.x = x;
     return r;
   };
-  for (const u of UNITS) {
-    html("div", "unit", path, `<h2>${u.title}</h2><p>${u.sub}</p>`);
+  UNITS.forEach((u, ui) => {
+    const head = html("div", "unit", path, `<div><h2>${u.title}</h2><p>${u.sub}</p></div><div class="unit-art">${UNIT_ART[ui]}</div>`);
+    head.style.setProperty("--uc", u.color); head.style.setProperty("--ud", u.dark);
     for (const i of u.lessons) {
       const L = LESSONS[i], st = save.stars[i] || 0, open = isUnlocked(i);
-      const n = html("button", "node" + (st ? " done" : "") + (!open ? " locked" : "") + (i === current && open ? " current" : ""), row(false),
-        open ? L.emoji : "🔒");
-      if (st) html("div", "stars", n, "⭐".repeat(st) + "☆".repeat(3 - st));
+      const r = row(false);
+      const n = html("button", "node" + (st ? " done" : "") + (!open ? " locked" : "") + (i === current && open ? " current" : ""), r,
+        icon(open ? L.glyph : "lock"));
+      n.style.setProperty("--uc", u.color); n.style.setProperty("--ud", u.dark);
+      if (st) html("div", "stars", n, [0, 1, 2].map(k => icon(k < st ? "star" : "starOff")).join(""));
       if (i === current && open) html("div", "start-tip", n, "START");
       n.onclick = () => {
         if (!open) { sfx("bad"); n.classList.add("shake"); setTimeout(() => n.classList.remove("shake"), 400); heroSay("Finish the lesson before this one to unlock it!"); return; }
         openSheet(i);
       };
+      addBuddy(r, i);
       if (L.game) {
         const g = GAMES[L.game], gOpen = gameUnlocked(L.game);
-        const gn = html("button", "node game" + (!gOpen ? " locked" : ""), row(true), gOpen ? g.emoji : "🎁");
-        if (save.medals[L.game]) html("div", "stars", gn, MEDALS[save.medals[L.game]]);
+        const gn = html("button", "node game" + (!gOpen ? " locked" : ""), row(true), icon(gOpen ? g.glyph : "lock"));
+        if (save.medals[L.game]) html("div", "stars", gn, medalIcon(save.medals[L.game]));
         gn.onclick = () => {
           if (!gOpen) { sfx("bad"); heroSay("Finish the lesson above to unlock this bonus game!"); return; }
           startMini(L.game);
         };
       }
+      if (BAGS[i]) {
+        const id = BAGS[i], ready = st > 0 && !save.bags[id];
+        const bn = html("button", "node bag" + (save.bags[id] ? " claimed" : ready ? " ready" : " locked"), row(true), icon(save.bags[id] ? "bagOpen" : "bag"));
+        bn.onclick = async () => {
+          if (save.bags[id]) { heroSay("You already opened this gym bag!"); return; }
+          if (!ready) { sfx("bad"); heroSay("Finish the lesson above to open this gym bag!"); return; }
+          await openBag(id);
+          renderHome(false);
+        };
+      }
     }
-  }
+  });
   const allDone = doneCount === LESSONS.length;
-  const t = html("button", "node trophy" + (allDone ? "" : " locked"), row(false), "🏆");
+  const t = html("button", "node trophy" + (allDone ? "" : " locked"), row(false), icon("cup"));
   t.onclick = () => {
     if (allDone) { confetti(); sfx("fanfare"); heroSay("You're a 5-Out champion! Pick any bonus game!"); pickReward(); }
     else heroSay("Finish every lesson to win the trophy!");
@@ -111,12 +138,33 @@ function renderHome(greet = true) {
 }
 $("#heroCoachBtn").onclick = () => { homeCoach.flash("happy", 1500); heroSay(pick(TIPS)); };
 
+// A character beside a lesson on the path, on the side away from the circle.
+// It moves a little while it waits, and cheers the first time you come back
+// after finishing that lesson.
+function addBuddy(r, i) {
+  const c = PATH_CAST.find(c => c.lesson === i);
+  if (!c) return;
+  const x = +r.dataset.x, side = x > 0 ? -1 : 1;
+  const b = html("button", "buddy b-" + (c.kind || c.look.pose), r, castSVG(c));
+  b.style.setProperty("--bx", side * 118 + "px");
+  b.setAttribute("aria-label", c.says);
+  const done = save.stars[i] > 0;
+  if (done && !save.cheered[i]) {
+    save.cheered[i] = true; persist();
+    b.classList.add("cheer");
+    html("div", "buddy-say", b, c.says);
+    setTimeout(() => sfx("good"), 600);
+  }
+  b.onclick = () => { b.classList.remove("hop"); void b.offsetWidth; b.classList.add("hop"); speak(c.says); };
+}
+
 function openSheet(i) {
   const L = LESSONS[i], done = save.stars[i];
   const wrap = html("div", "sheet-wrap", document.body);
   const sh = html("div", "sheet", wrap);
-  html("h2", "", sh, `${L.emoji} Lesson ${i + 1}: ${L.title}`);
-  html("p", "", sh, L.blurb + (L.game ? ` <br>🎁 Bonus game: <b>${GAMES[L.game].title}</b>` : ""));
+  const u = unitOf(i);
+  html("h2", "sheet-title", sh, `<span class="glyph-badge" style="background:${u.color}">${icon(L.glyph)}</span>Lesson ${i + 1}: ${L.title}`);
+  html("p", "", sh, L.blurb + (L.game ? `<br>Bonus game: <b>${GAMES[L.game].title}</b>` : ""));
   const r = html("div", "row", sh);
   const cancel = html("button", "btn ghost", r, "Back");
   const start = html("button", "btn green", r, done ? "Practice" : "Start");
@@ -139,7 +187,7 @@ async function startLesson(i) {
   lessonCoach.mood("idle");
   setScore(); setProgress(0, 1);
   $("#buttons").innerHTML = "";
-  drawCourt();
+  drawCourt(unitOf(i).court);
   try {
     await LESSONS[i].run();
   } catch (e) {
@@ -160,7 +208,7 @@ async function startWatch() {
   lessonCoach.mood("idle");
   setScore();
   $("#buttons").innerHTML = "";
-  drawCourt();
+  drawCourt("gym");
   try { await watchOffense(); } catch (e) { if (e !== ABORT) throw e; }
 }
 
@@ -168,7 +216,7 @@ function quitLesson() {
   if ($("#lessonTitle").classList.contains("hidden") === false) { renderHome(false); return; } // watch mode
   const wrap = html("div", "sheet-wrap", document.body);
   const sh = html("div", "sheet", wrap);
-  html("h2", "", sh, "Wait, don't go! 🏀");
+  html("h2", "", sh, "Wait, don't go!");
   html("p", "", sh, "If you quit now, you'll lose your progress in this lesson.");
   const r = html("div", "row", sh);
   const quit = html("button", "btn ghost", r, "Quit");
@@ -178,33 +226,23 @@ function quitLesson() {
   quit.onclick = () => { wrap.remove(); renderHome(false); };
 }
 
-function lessonComplete(i) {
+// Stars, XP, card pack and streak, one screen at a time (js/rewards.js), then the bonus game.
+async function lessonComplete(i) {
   const acc = stats.questions ? stats.firstTry / stats.questions : 1;
   const stars = acc >= .9 ? 3 : acc >= .7 ? 2 : 1;
   const firstTime = !save.stars[i];
-  const xp = 10 + stats.firstTry * 5 + (stars === 3 ? 10 : 0);
+  const parts = [["Finished the lesson", 10], ["Right the first time", stats.firstTry * 5], ["Perfect lesson", stars === 3 ? 10 : 0]];
+  const xp = parts.reduce((a, p) => a + p[1], 0);
   save.stars[i] = Math.max(save.stars[i] || 0, stars);
   addXP(xp);
-  const newDay = touchStreak();
-  show("complete");
-  setActiveCoach(doneCoach);
-  doneCoach.mood("cheer");
-  $("#completeTitle").textContent = stars === 3 ? "Perfect lesson!" : "Lesson complete!";
-  $("#completeCards").innerHTML =
-    `<div class="card xp"><div class="k">XP earned</div><div class="v">⭐ ${xp}</div></div>` +
-    `<div class="card acc"><div class="k">Accuracy</div><div class="v">🎯 ${Math.round(acc * 100)}%</div></div>` +
-    `<div class="card st"><div class="k">Stars</div><div class="v">${"⭐".repeat(stars)}</div></div>`;
-  $("#completeMsg").innerHTML = (newDay ? `🔥 <b>${save.streak} day streak!</b> ` : "") +
-    (stats.bestCombo >= 3 ? `Best combo: ${stats.bestCombo} in a row! ` : "") +
-    (stars < 3 ? "Play again for 3 stars!" : "");
-  sfx("fanfare");
-  confetti();
-  speak(stars === 3 ? "Perfect! You're a 5-Out superstar!" : stars === 2 ? "Great job! Lesson complete!" : "You did it! Lesson complete!");
-  // Card packs: one per lesson (3 stars improves the odds). The very first pack
-  // has a rare or better, and finishing the Big Game the first time adds a legendary.
-  const packs = [makePack("Lesson card pack!", 2, stars === 3 ? "good" : "normal",
-    [null, save.packs === 0 ? "rare" : i === LESSONS.length - 1 && firstTime ? "legendary" : null]), streakPack(newDay)];
-  $("#completeNext").onclick = async () => { await showPacks(packs); reward(i, firstTime); };
+  challenge("lesson"); challenge("stars", stars);
+  const day = touchStreak();
+  // The lesson's card pack (3 stars improves the odds). The very first pack has a
+  // rare or better, and finishing the Big Game the first time adds a legendary.
+  const pack = makePack("Lesson card pack!", 2, stars === 3 ? "good" : "normal",
+    [null, save.packs === 0 ? "rare" : i === LESSONS.length - 1 && firstTime ? "legendary" : null]);
+  await lessonRewards({ i, stars, acc, xp, parts, bestCombo: stats.bestCombo, firstTime, pack, day });
+  reward(i, firstTime);
 }
 
 // ---------- Rewards ----------
@@ -217,9 +255,9 @@ function reward(i, firstTime) {
   rewardCoach.mood("happy");
   const box = $("#rewardBody");
   box.innerHTML = "";
-  html("div", "gift", box, "🎁");
+  html("div", "gift", box, `<span class="glyph-badge game big">${icon(g.glyph)}</span>`);
   html("h2", "", box, firstTime ? "New bonus game!" : "Bonus game!");
-  html("p", "", box, `${g.emoji} <b>${g.title}</b>`);
+  html("p", "", box, `<b>${g.title}</b>`);
   const a = html("div", "actions", box);
   html("button", "btn gold wide", a, `Play ${g.title}!`).onclick = () => startMini(id);
   html("button", "btn ghost wide", a, "Skip").onclick = () => renderHome();
@@ -237,7 +275,7 @@ function pickReward() {
   const grid = html("div", "pick-grid", box);
   for (const id of unlockedGames()) {
     const g = GAMES[id];
-    html("button", "btn gold", grid, `<span>${g.emoji}</span>${g.title}`).onclick = () => startMini(id);
+    html("button", "btn gold", grid, `<span class="glyph-badge game">${icon(g.glyph)}</span>${g.title}`).onclick = () => startMini(id);
   }
   const a = html("div", "actions", box);
   html("button", "btn ghost wide", a, "Skip").onclick = () => renderHome();
@@ -253,7 +291,8 @@ async function startMini(id) {
       show("mini");
       const res = await playMini(id);
       const odds = ["normal", "normal", "good", "great"][res.medal];
-      await showPacks([res.medal ? makePack(`${MEDALS[res.medal]} Medal card!`, 1, odds) : null, streakPack(res.newDay)]);
+      await showPacks([res.medal ? makePack(`${medalIcon(res.medal, "inline")} Medal card!`, 1, odds) : null, challengePack()]);
+      if (res.newDay) await streakScreen(res.newDay);
       if (!res.again) break;
       RUN++;
     }
@@ -270,11 +309,10 @@ function openNotes() {
   $("#unlockAll").checked = !!save.unlockAll;
 }
 $("#unlockAll").onchange = e => { save.unlockAll = e.target.checked; persist(); };
-$("#resetBtn").onclick = () => {
-  if (!confirm("Erase all stars, XP, streak and medals on this phone?")) return;
-  localStorage.removeItem("fiveout-save"); localStorage.removeItem("fiveout-stars");
+$("#resetBtn").onclick = () => confirmSheet("Erase every player?", "This removes every player on this phone, with all their stars, XP, streaks and cards. It can't be undone.", "Erase all", () => {
+  Object.keys(localStorage).filter(k => k.startsWith("fiveout-") && k !== "fiveout-sound").forEach(k => localStorage.removeItem(k));
   location.reload();
-};
+});
 
 // ---------- Home screen app (PWA) ----------
 // Progress lives in this phone's storage. Ask the browser to keep it, and nudge
@@ -290,9 +328,9 @@ if (!standalone && isIOS) $("#installBtn").classList.remove("hidden");
 function installSheet(firstLesson, then) {
   const wrap = html("div", "sheet-wrap", document.body);
   const sh = html("div", "sheet", wrap);
-  html("h2", "", sh, firstLesson ? "📲 Before you play: add the game to your Home Screen" : "📲 Add to Home Screen");
-  html("p", "", sh, "1. Tap the <b>Share</b> button <b>⬆️</b> in Safari.<br>2. Scroll down and tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b>, then open the new <b>5-Out Hoops</b> icon.<br><br>" +
-    "<b>Your stars, XP, streak and cards live in the icon, not in Safari.</b> Anything earned here in Safari won't show up in the icon, and Safari may erase it after a week.");
+  html("h2", "", sh, `${icon("phone")} ` + (firstLesson ? "Before you play: add the game to your Home Screen" : "Add to Home Screen"));
+  html("p", "", sh, "1. Tap the <b>Share</b> button in Safari (the square with an arrow pointing up).<br>2. Scroll down and tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b>, then open the new <b>5-Out Hoops</b> icon.<br><br>" +
+    "<b>Your players, stars, XP, streak and cards live in the icon, not in Safari.</b> Anything earned here in Safari won't show up in the icon, and Safari may erase it after a week.");
   const close = () => wrap.remove();
   if (then) {
     const r = html("div", "row", sh);
@@ -318,12 +356,16 @@ $("#installBtn").onclick = async () => {
 (function init() {
   homeCoach = createCoach(); $("#heroCoachBtn").appendChild(homeCoach.el);
   lessonCoach = createCoach(); $("#lessonCoach").appendChild(lessonCoach.el);
-  doneCoach = createCoach(); $("#doneCoach").appendChild(doneCoach.el);
+  stepCoach = createCoach(); $("#stepCoach").appendChild(stepCoach.el);
   rewardCoach = createCoach(); $("#rewardCoach").appendChild(rewardCoach.el);
   miniCoach = createCoach();
   packCoach = createCoach(); $("#packCoach").appendChild(packCoach.el);
+  makerCoach = createCoach(); $("#makerCoach").appendChild(makerCoach.el);
   $("#cardsBtn").onclick = openBinder;
+  $("#meBtn").onclick = openPlayers;
   $("#binderClose").onclick = () => renderHome(false);
+  $("#playersClose").onclick = () => renderHome(false);
+  $("#makerBack").onclick = () => openPlayers();
   $("#quitBtn").onclick = quitLesson;
   $("#miniQuit").onclick = () => renderHome(false);
   $("#watchBtn").onclick = startWatch;
@@ -331,5 +373,10 @@ $("#installBtn").onclick = async () => {
   $("#notesClose").onclick = () => renderHome(false);
   document.querySelectorAll(".soundbtn").forEach(b => b.onclick = toggleSound);
   renderSound();
-  renderHome();
+  // A new phone makes its first player before anything else; a player saved
+  // before profiles existed picks a look first.
+  const me = currentPlayer();
+  if (!me) openMaker(null);
+  else if (!me.look) openMaker(me);
+  else renderHome();
 })();

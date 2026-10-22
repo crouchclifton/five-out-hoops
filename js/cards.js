@@ -104,8 +104,8 @@ function playerSVG(c) {
   const line = "#3b1d0c";
   const arm = (pts) => `<polyline points="${pts}" fill="none" stroke="${skin}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
   const hand = (x, y) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${skin}"/>`;
-  const ball = (x, y, r) => `<g transform="translate(${x} ${y})"><circle r="${r}" fill="#f97316" stroke="#7c2d12" stroke-width="1.2"/>` +
-    `<path d="M${-r} 0 H${r} M0 ${-r} V${r} M${-r * .7} ${-r * .7} Q0 0 ${-r * .7} ${r * .7} M${r * .7} ${-r * .7} Q0 0 ${r * .7} ${r * .7}" fill="none" stroke="#7c2d12" stroke-width=".9"/></g>`;
+  const ball = (x, y, r) => `<g class="pl-ball"><g transform="translate(${x} ${y})"><circle r="${r}" fill="#f97316" stroke="#7c2d12" stroke-width="1.2"/>` +
+    `<path d="M${-r} 0 H${r} M0 ${-r} V${r} M${-r * .7} ${-r * .7} Q0 0 ${-r * .7} ${r * .7} M${r * .7} ${-r * .7} Q0 0 ${r * .7} ${r * .7}" fill="none" stroke="#7c2d12" stroke-width=".9"/></g></g>`;
   const whoosh = (x, y) => `<path d="M${x} ${y} h-9 M${x + 1} ${y + 5} h-12 M${x} ${y + 10} h-8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".8"/>`;
 
   // Arms and ball for each pose. "back" draws behind the body, "front" over it.
@@ -133,6 +133,14 @@ function playerSVG(c) {
       front = hand(26, 101) + arm("69,76 76,88 78,94") + hand(78, 95) + ball(82, 104, 7) +
         `<path d="M78 112 q4 -3 8 0" stroke="#fff" stroke-width="1.5" fill="none" opacity=".7"/>`;
       break;
+    case "wave": // ball at the hip, other hand waving hello
+      back = arm("31,76 25,92 27,104");
+      front = hand(27, 104) + `<g class="pl-wave">${arm("69,76 82,60 84,42")}${hand(84, 41)}</g>`;
+      break;
+    case "whistle": // a ref blowing the whistle
+      back = arm("31,76 25,92 27,104");
+      front = hand(27, 104) + arm("69,76 76,66 59,57") + `<g class="pl-whistle"><rect x="49" y="53" width="9" height="5.5" rx="2.5" fill="#cbd5e1" stroke="#475569" stroke-width="1"/></g>` + hand(60, 57);
+      break;
     default: // hold: ball tucked at the hip
       back = arm("31,76 25,92 27,104");
       front = hand(27, 104) + ball(78, 98, 9) + arm("69,76 76,88 72,96") + hand(72, 96);
@@ -157,9 +165,10 @@ function playerSVG(c) {
   return `<svg viewBox="0 0 100 110" aria-hidden="true">
   ${back}
   <path d="M27 112 L29 82 Q30 72 41 69 L59 69 Q70 72 71 82 L73 112 Z" fill="${L.jersey}"/>
+  ${L.ref ? `<clipPath id="refBody"><path d="M27 112 L29 82 Q30 72 41 69 L59 69 Q70 72 71 82 L73 112 Z"/></clipPath><g clip-path="url(#refBody)" fill="#111827">${[31, 39, 47, 55, 63].map(x => `<rect x="${x}" y="66" width="4" height="48"/>`).join("")}</g>` : ""}
   <path d="M41 69 L50 80 L59 69" fill="none" stroke="${L.trim}" stroke-width="2.6" stroke-linejoin="round"/>
   <path d="M30 80 Q35 82 36 90 M70 80 Q65 82 64 90" fill="none" stroke="${L.trim}" stroke-width="2"/>
-  <text x="50" y="101" text-anchor="middle" font-size="15" font-weight="900" fill="${L.trim}" stroke="rgba(0,0,0,.25)" stroke-width=".6" font-family="ui-rounded, system-ui, sans-serif">${L.num}</text>
+  <text x="50" y="101" text-anchor="middle" font-size="15" font-weight="900" fill="${L.trim}" stroke="rgba(0,0,0,.25)" stroke-width=".6" font-family="ui-rounded, system-ui, sans-serif">${L.num ?? ""}</text>
   ${hb}
   <rect x="45" y="56" width="10" height="14" rx="4" fill="${skin}"/>
   <circle cx="33" cy="46" r="4" fill="${skin}"/><circle cx="67" cy="46" r="4" fill="${skin}"/>
@@ -192,10 +201,10 @@ function cardBack(c) {
     <div class="pc-rarlabel">${RARITY[c.rarity].label}</div>
     <div class="pc-move"><span>Signature move</span>${c.move}</div>
     ${bars}
-    <div class="pc-tip"><span>🏀 5-Out tip</span>${c.tip}</div>
+    <div class="pc-tip"><span>${icon("ball")} 5-Out tip</span>${c.tip}</div>
   </div>`;
 }
-const CARD_COVER = `<div class="pcard cover"><div class="cv-ball">🏀</div><div class="cv-text">5-OUT<br>HOOPS</div></div>`;
+const CARD_COVER = `<div class="pcard cover"><div class="cv-ball">${icon("ball")}</div><div class="cv-text">5-OUT<br>HOOPS</div></div>`;
 // A card that flips between two faces when it gets the class "on".
 function flipCard(a, b, parent) {
   const f = html("div", "flip", parent, `<div class="flip-in"><div class="face fa">${a}</div><div class="face fb">${b}</div></div>`);
@@ -222,18 +231,14 @@ function drawCard(odds, force) {
   const dup = !!save.cards[c.id];
   save.cards[c.id] = (save.cards[c.id] || 0) + 1;
   const xp = dup ? RARITY[rarity].xp : 0;
-  if (dup) save.xp += xp; else save.newCards.push(c.id);
+  if (!dup) save.newCards.push(c.id);
   persist();
+  if (dup) addXP(xp);
   return { card: c, dup, xp };
 }
-// A pack: { title, n, odds, force: [rarity or null per slot] }
-function makePack(title, n, odds, force = []) { return { title, n, odds, force }; }
+// A pack: { title, n, odds, force: [rarity or null per slot], kind: "pack" or "bag" }
+function makePack(title, n, odds, force = [], kind = "pack") { return { title, n, odds, force, kind }; }
 const ownedCount = () => CARDS.filter(c => save.cards[c.id]).length;
-// The pack for reaching a streak milestone today, if there is one.
-function streakPack(newDay) {
-  return newDay && STREAK_PACKS.includes(save.streak) ? makePack(`🔥 ${save.streak} day streak bonus!`, 3, "great") : null;
-}
-
 // ---------- Opening packs ----------
 const REVEAL_LINE = { common: "New card!", rare: "Rare card!", epic: "Epic card!", legendary: "Legendary card!" };
 let packCoach = null;
@@ -252,17 +257,19 @@ function openPack(pack) {
     box.innerHTML = "";
     html("h2", "", box, pack.title);
     const wrap = html("div", "pack-wrap", box);
-    const foil = html("button", "foil", wrap, `<div class="foil-top"></div><div class="foil-ball">🏀</div><div class="foil-text">5-OUT HOOPS<br><small>${pack.n} ${pack.n === 1 ? "CARD" : "CARDS"}</small></div>`);
-    const hint = html("p", "", box, "Tap the pack to open it!");
+    const bag = pack.kind === "bag";
+    const foil = bag ? html("button", "foil bagpack", wrap, icon("bag"))
+      : html("button", "foil", wrap, `<div class="foil-top"></div><div class="foil-ball">${icon("ball")}</div><div class="foil-text">5-OUT HOOPS<br><small>${pack.n} ${pack.n === 1 ? "CARD" : "CARDS"}</small></div>`);
+    const hint = html("p", "", box, bag ? "Tap the gym bag to open it!" : "Tap the pack to open it!");
     sfx("coin");
-    speak("Tap the pack to open it!");
+    speak(bag ? "Tap the gym bag to open it!" : "Tap the pack to open it!");
     // Draw (and save) the cards right away, so leaving the screen can't lose them.
     const pulls = [];
     for (let i = 0; i < pack.n; i++) pulls.push(drawCard(pack.odds, pack.force[i]));
     save.packs++; persist();
     foil.onclick = () => {
       foil.onclick = null;
-      foil.classList.add("rip");
+      foil.classList.add(bag ? "unzip" : "rip");
       sfx("pop");
       setTimeout(() => {
         wrap.remove();
@@ -292,7 +299,7 @@ function openPack(pack) {
             if (flipped === pulls.length && !box.querySelector(".pack-done")) {
               hint.textContent = "";
               const a = html("div", "actions pack-done", box);
-              html("button", "btn green wide", a, "Continue").onclick = () => { hush(); resolve(); };
+              html("button", "btn green wide step-next", a, "Continue").onclick = () => { hush(); resolve(); };
             }
           };
         });
@@ -306,6 +313,7 @@ function openBinder() {
   stopRun();
   show("binder");
   setActiveCoach(null);
+  $("#binderTitle").innerHTML = `${icon("cards")} My Card Binder`;
   const fresh = new Set(save.newCards);
   save.newCards = []; persist();
   $("#binderCount").textContent = `${ownedCount()} / ${CARDS.length}`;

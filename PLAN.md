@@ -1,4 +1,8 @@
-# Next round of work (agreed with Clifton, October 22, 2026)
+# Round 3 (October 22, 2026): done
+
+Clifton asked for all the Duolingo ideas except recording his own voice (maybe later), plus player profiles. Built: hand-drawn SVG icons instead of emoji (js/icons.js); the Eagles identity (navy and orange, EAGLES on the gym floor, an original cartoon eagle mascot, never the league's logo; a credit line on the coaches page saying it is not an official league app); Unit 1 on an orange outdoor court and Unit 2 in the navy Eagles Gym; characters beside the path that move and cheer (js/cast.js); gym bags on the path; rewards one screen at a time (stars, XP, card pack, streak); streak milestones at 3, 7, 14, 30, 60 and 100 days with Coach Bounce on fire; Rest Day Passes (start with 1, earn one at each milestone from 7 on, hold 2); three daily Skills Challenges that pay a card pack (js/rewards.js); players as a face, jersey and number with no names, saved only on the phone, with per-player start over (js/profiles.js). Still Clifton's to do: playtest with a few players, and keep checking new features against Coach Russ's video.
+
+# Round 2 (agreed with Clifton, October 22, 2026)
 
 **Status, October 22, 2026: done.** All fixes 1 to 11, the Free Throw Frenzy floor (green zone never below .18 of the bar, speed capped at 1.2 sweeps a second, so the last shots still give about 150 ms), and the basketball cards. Added during the work at Clifton's request: Swish Shot's hoop no longer jumps across the screen when it speeds up, the home path no longer hangs 100 px off the right edge in Safari, every card player is a boy (boys-only league), and the coach's mouth now follows the speech instead of running through the quiet at the end of each clip. Big Game scoring went with "+1 per first-try read" (baskets still 2), not turnovers.
 

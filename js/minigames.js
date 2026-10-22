@@ -8,27 +8,28 @@
 
 const GAMES = {
   swish: {
-    title: "Swish Shot", emoji: "🏀", icon: "👆",
+    title: "Swish Shot", glyph: "swish",
     intro: "Swish Shot! <b>Flick</b> the ball up at the hoop. Make as many baskets as you can!",
     tiers: [6, 14, 24], unit: "points", make: () => new SwishShot(),
   },
   passpop: {
-    title: "Pass Pop", emoji: "🤝", icon: "👉",
+    title: "Pass Pop", glyph: "passpop",
     intro: "Pass Pop! <b>Tap the open teammate next to the ball.</b> Don't pass to a covered teammate!",
     tiers: [8, 14, 20], unit: "passes", make: () => new PassPop(),
   },
   freethrow: {
-    title: "Free Throw Frenzy", emoji: "🎯", icon: "⏱️",
+    title: "Free Throw Frenzy", glyph: "freethrow",
     intro: "Free Throw Frenzy! <b>Tap</b> when the line is in the <b>green</b> zone to shoot. Ten shots!",
     tiers: [8, 15, 22], unit: "points", make: () => new FreeThrow(),
   },
   dribble: {
-    title: "Dribble Dash", emoji: "💨", icon: "👐",
+    title: "Dribble Dash", glyph: "dribble",
     intro: "Dribble Dash! Tap <b>left, right, left, right</b> as fast as you can to beat the defender to the hoop!",
     tiers: [13, 10, 8], unit: "seconds", lowerIsBetter: true, make: () => new DribbleDash(),
   },
 };
-const MEDALS = ["", "🥉", "🥈", "🥇"];
+const MEDALS = ["", "bronze", "silver", "gold"];
+const medalIcon = (m, cls = "") => m ? icon(MEDAL_ICON[m], cls) : "";
 const MEDAL_XP = [5, 10, 20, 30];
 
 // 0 = no medal, 1 = bronze, 2 = silver, 3 = gold
@@ -138,7 +139,7 @@ class SwishShot {
   // frame at a time, so a speed change never makes the hoop jump across the screen
   // (sin(clock * speed) did: a new speed moved the whole swing at once).
   get hoopX() { return this.W / 2 + Math.sin(this.phase) * this.W * .28; }
-  hud() { return [`🏀 ${this.score}`, `⏱️ ${Math.ceil(this.time)}`]; }
+  hud() { return [icon("ball") + this.score, icon("clock") + Math.ceil(this.time)]; }
   down(x, y) {
     if (this.ball.state === "ready" && Math.hypot(x - this.ball.x, y - this.ball.y) < this.r * 2.6)
       this.drag = { x, y, t: performance.now() };
@@ -147,7 +148,7 @@ class SwishShot {
     if (!this.drag || !this.running) { this.drag = null; return; }
     const dx = x - this.drag.x, dy = this.drag.y - y;
     this.drag = null;
-    if (dy < 25) { this.fx.add("Flick UP! 👆", this.W / 2, this.home.y - this.r * 2, "#fff", 26); return; }
+    if (dy < 25) { this.fx.add("Flick UP!", this.W / 2, this.home.y - this.r * 2, "#fff", 26); return; }
     const b = this.ball;
     const ex = b.x + dx * ((b.y - this.hoopY) / dy) * 0.9;
     b.state = "fly";
@@ -180,7 +181,7 @@ class SwishShot {
           this.score += pts;
           b.state = "drop"; b.vy = 40; b.hx = this.hoopX;
           sfx(this.streak === 3 ? "combo" : "swish");
-          this.fx.add(this.streak === 3 ? "ON FIRE! 🔥" : (off < this.hoopW * .15 ? "SWISH!" : "+" + pts), this.hoopX, this.hoopY - 40);
+          this.fx.add(this.streak === 3 ? "ON FIRE!" : (off < this.hoopW * .15 ? "SWISH!" : "+" + pts), this.hoopX, this.hoopY - 40);
           this.netSwing = 14;
         } else {
           this.streak = 0;
@@ -211,9 +212,13 @@ class SwishShot {
     if (!behind) drawBall(ctx, b.x, b.y, b.r, b.spin, fire);
     if (b.state === "ready" && this.running) {
       const bob = Math.sin(this.clock * 6) * 6;
-      drawText(ctx, "⬆", b.x, b.y - this.r * 1.9 + bob, 34, "#ffc800");
+      // a bouncing arrow that says "flick up"
+      const ax = b.x, ay = b.y - this.r * 1.9 + bob;
+      ctx.fillStyle = "#ffc800"; ctx.strokeStyle = "#1f2937"; ctx.lineWidth = 3; ctx.lineJoin = "round";
+      ctx.beginPath(); ctx.moveTo(ax, ay - 16); ctx.lineTo(ax + 14, ay); ctx.lineTo(ax + 6, ay); ctx.lineTo(ax + 6, ay + 14);
+      ctx.lineTo(ax - 6, ay + 14); ctx.lineTo(ax - 6, ay); ctx.lineTo(ax - 14, ay); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
-    if (fire) drawText(ctx, "🔥 ON FIRE x3", W / 2, H * .5, 26, "#fb923c");
+    if (fire) drawText(ctx, "ON FIRE x3", W / 2, H * .5, 26, "#fb923c");
     this.fx.draw(ctx);
   }
 }
@@ -229,7 +234,7 @@ class FreeThrow {
     if (!this.ball) this.ball = { x: this.home.x, y: this.home.y, r: this.r, state: "ready", spin: 0 };
   }
   start() { this.running = true; }
-  hud() { return [`🏀 ${this.score}`, `Shot ${Math.min(this.taken + 1, this.shots)}/${this.shots}`]; }
+  hud() { return [icon("ball") + this.score, `Shot ${Math.min(this.taken + 1, this.shots)}/${this.shots}`]; }
   // Gets faster with each make, but never past 1.2 sweeps a second.
   get speed() { return Math.min(1.2, 0.85 + this.makes * 0.13); }
   down() {
@@ -326,7 +331,7 @@ class PassPop {
   }
   P(x, y) { return [this.ox + x * this.s, this.oy + y * this.s]; }
   start() { this.running = true; }
-  hud() { return [`🤝 ${this.score}`, `⏱️ ${Math.ceil(this.time)}`]; }
+  hud() { return [icon("ball") + this.score, icon("clock") + Math.ceil(this.time)]; }
   get window() { return Math.max(.85, 1.7 - this.score * .05); }
   // Only a teammate next to the ball gets open: skip passes are steals in the lessons.
   pickOpen() {
@@ -428,7 +433,7 @@ class DribbleDash {
     this.top = 210; this.bottom = H - 200;
   }
   start() { this.running = true; }
-  hud() { return [`⏱️ ${this.clock.toFixed(1)}`, this.me >= 1 ? "🏁" : `${Math.round(this.me * 100)}%`]; }
+  hud() { return [icon("clock") + this.clock.toFixed(1), this.me >= 1 ? icon("check") : `${Math.round(this.me * 100)}%`]; }
   down(x, y) {
     if (!this.running) return;
     const hit = Object.entries(this.btns).find(([, b]) => Math.hypot(x - b.x, y - b.y) < b.r * 1.25);
@@ -548,10 +553,10 @@ async function playMini(id) {
   // Intro card with the coach explaining the game.
   const card = html("div", "panel");
   card.appendChild(miniCoach.el);
-  html("h2", "", card, `${def.emoji} ${def.title}`);
+  html("h2", "", card, def.title);
   html("p", "", card, def.intro);
-  html("div", "howto", card, def.icon);
-  html("div", "tiers", card, def.tiers.map((t, i) => `${MEDALS[i + 1]} ${def.lowerIsBetter ? t + "s" : t}`).join(" &nbsp; "));
+  html("div", "howto", card, `<span class="glyph-badge game">${icon(def.glyph)}</span>`);
+  html("div", "tiers", card, def.tiers.map((t, i) => `<span>${medalIcon(i + 1)} ${def.lowerIsBetter ? t + "s" : t}</span>`).join(""));
   const go = html("button", "btn green wide", card, "Play!");
   miniGame = def.make();
   const ctx = sizeCanvas();
@@ -566,7 +571,7 @@ async function playMini(id) {
       const W = $("#miniCanvas").clientWidth, H = $("#miniCanvas").clientHeight;
       ctx.clearRect(0, 0, W, H);
       miniGame.draw(ctx);
-      if (miniGame.running || miniGame.done) { const [a, b] = miniGame.hud(); $("#miniHudA").textContent = a; $("#miniHudB").textContent = b; }
+      if (miniGame.running || miniGame.done) { const [a, b] = miniGame.hud(); if ($("#miniHudA").innerHTML !== a) $("#miniHudA").innerHTML = a; if ($("#miniHudB").innerHTML !== b) $("#miniHudB").innerHTML = b; }
       raf = requestAnimationFrame(tick);
     }; })();
   raf = requestAnimationFrame(loop);
@@ -602,12 +607,13 @@ async function playMini(id) {
   const xp = MEDAL_XP[medal];
   addXP(xp);
   const newDay = touchStreak(); // bonus games keep the streak alive too
+  challenge("game"); challenge("medal", medal);
   const res = html("div", "panel");
   res.appendChild(miniCoach.el);
   miniCoach.mood(medal >= 2 ? "cheer" : medal === 1 ? "happy" : "idle");
-  html("div", "medal", res, medal ? MEDALS[medal] : (won ? "🏀" : "😅"));
+  html("div", "medal", res, medal ? medalIcon(medal) : icon("ball"));
   html("div", "result-score", res, won ? `${fmtScore(def, score)} ${def.lowerIsBetter ? "" : def.unit}` : "So close!");
-  html("div", "result-best", res, better && prevBest !== undefined ? "⭐ New best!" : save.best[id] !== undefined ? `Best: ${fmtScore(def, save.best[id])}` : "");
+  html("div", "result-best", res, better && prevBest !== undefined ? `${icon("star")} New best!` : save.best[id] !== undefined ? `Best: ${fmtScore(def, save.best[id])}` : "");
   html("div", "result-best", res, `+${xp} XP`);
   const again = html("button", "btn ghost wide", res, "Play again");
   const cont = html("button", "btn green wide", res, "Continue");
