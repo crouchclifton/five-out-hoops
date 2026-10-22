@@ -226,6 +226,7 @@ function tone(freq, dur, type = "sine", when = 0, vol = 0.12) {
   if (!soundOn) return;
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state !== "running") audio.resume();
     const o = audio.createOscillator(), g = audio.createGain();
     o.type = type; o.frequency.value = freq;
     const t = audio.currentTime + when;
@@ -243,12 +244,43 @@ function speak(html) {
   if (!soundOn || !window.speechSynthesis) return;
   const t = html.replace(/<[^>]+>/g, "").replace(/#(\d)/g, "number $1")
     .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "").replace(/\s+/g, " ").trim();
-  speechSynthesis.cancel();
-  if (!t) return;
+  if (!t) { speechSynthesis.cancel(); return; }
   const u = new SpeechSynthesisUtterance(t);
   u.rate = 0.95; u.pitch = 1.1;
-  speechSynthesis.speak(u);
+  // iOS Safari drops an utterance spoken in the same instant as cancel(),
+  // so only cancel when something is talking, and wait a beat after it.
+  if (speechSynthesis.speaking || speechSynthesis.pending) {
+    speechSynthesis.cancel();
+    setTimeout(() => speechSynthesis.speak(u), 80);
+  } else {
+    speechSynthesis.speak(u);
+  }
 }
+
+// iPhones only allow sound after the first real tap, and only from a tap event
+// (touchend or click, not pointerdown). On that first tap, wake up both the
+// sound effects and the voice. "playback" lets sound play even with the
+// ringer switch on silent (Safari 17 and later).
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume();
+    const src = audio.createBufferSource();
+    src.buffer = audio.createBuffer(1, 1, 22050);
+    src.connect(audio.destination);
+    src.start(0);
+  } catch (e) {}
+  if (window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    speechSynthesis.speak(u);
+  }
+}
+["touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true }));
 function say(html, hint = false) {
   const p = $("#prompt");
   p.innerHTML = html;
