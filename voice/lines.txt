@@ -1,5 +1,6 @@
 1 top, 2 wings, 2 corners. That's the 5-Out!
 1. Tap the Share button in Safari (the square with an arrow pointing up).2. Scroll down and tap Add to Home Screen.3. Tap Add, then open the new 5-Out Hoops icon.
+10 of 11
 3, 2, 1, GO!
 5-Out has 3 rules. Rule number 1: attack the basket. Rule number 2: pass and move. Rule number 3: fill the open spot. You'll learn them all!
 A Rest Day Pass covers a day you miss. Win more at streak milestones.
@@ -12,6 +13,8 @@ After you pass, don't stand still. Cut!
 Ankle Breaker
 Atlas Longarms
 Attack!
+Awesome job! Three stars!
+Awesome lesson!
 Awesome!
 Awesome! Everyone moves over one spot to fill the hole.
 Bank Shot
@@ -120,6 +123,7 @@ Game over! You scored 9 points!
 Get 10 answers right on the first try
 Get 3 stars in a lesson
 Get 5 right in a row
+Get every answer right the first time for a perfect lesson!
 Give & Go
 Give and go!
 Glass Man
@@ -326,6 +330,7 @@ Theo Banks
 This erases this player's stars, XP, streak and cards on this phone. It can't be undone.
 This removes every player on this phone, with all their stars, XP, streaks and cards. It can't be undone.
 This removes this player and all of their progress from this phone.
+Three stars
 Tip off!
 Too far! A defender could steal that. Pass to the teammate right next to you.
 Too long!

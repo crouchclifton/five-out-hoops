@@ -231,7 +231,9 @@ async function lessonComplete(i) {
   const acc = stats.questions ? stats.firstTry / stats.questions : 1;
   const stars = acc >= .9 ? 3 : acc >= .7 ? 2 : 1;
   const firstTime = !save.stars[i];
-  const parts = [["Finished the lesson", 10], ["Right the first time", stats.firstTry * 5], ["Perfect lesson", stars === 3 ? 10 : 0]];
+  // "Perfect" means every answer right the first time, nothing less.
+  const perfect = stats.firstTry === stats.questions;
+  const parts = [["Finished the lesson", 10], ["Right the first time", stats.firstTry * 5], ["Three stars", stars === 3 ? 10 : 0], ["Perfect lesson", perfect ? 10 : 0]];
   const xp = parts.reduce((a, p) => a + p[1], 0);
   save.stars[i] = Math.max(save.stars[i] || 0, stars);
   addXP(xp);
@@ -241,7 +243,7 @@ async function lessonComplete(i) {
   // rare or better, and finishing the Big Game the first time adds a legendary.
   const pack = makePack("Lesson card pack!", 2, stars === 3 ? "good" : "normal",
     [null, save.packs === 0 ? "rare" : i === LESSONS.length - 1 && firstTime ? "legendary" : null]);
-  await lessonRewards({ i, stars, acc, xp, parts, bestCombo: stats.bestCombo, firstTime, pack, day });
+  await lessonRewards({ i, stars, acc, xp, parts, perfect, right: stats.firstTry, asked: stats.questions, bestCombo: stats.bestCombo, firstTime, pack, day });
   reward(i, firstTime);
 }
 

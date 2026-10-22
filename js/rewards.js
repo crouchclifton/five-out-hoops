@@ -92,18 +92,21 @@ function stepScreen(build, { mood = "happy", label = "Continue" } = {}) {
 async function lessonRewards(r) {
   // 1. Stars
   await stepScreen(body => {
-    html("h2", "", body, r.stars === 3 ? "Perfect lesson!" : "Lesson complete!");
+    html("h2", "", body, r.perfect ? "Perfect lesson!" : r.stars === 3 ? "Awesome lesson!" : "Lesson complete!");
     const row = html("div", "big-stars", body);
     for (let k = 0; k < 3; k++) {
       const s = html("span", "big-star" + (k < r.stars ? " on" : ""), row, icon(k < r.stars ? "star" : "starOff"));
       s.style.animationDelay = .25 + k * .35 + "s";
       if (k < r.stars) setTimeout(() => sfx("coin"), 250 + k * 350);
     }
-    html("div", "pill-acc", body, `${icon("target")} ${Math.round(r.acc * 100)}% right the first time`);
+    // "10 of 11" is easier for a young player to picture than "91%".
+    html("div", "pill-acc", body, r.asked ? `${icon("target")} ${r.right} of ${r.asked} right the first time` : `${icon("target")} Every answer right`);
     if (r.stars < 3) html("p", "", body, "Play it again for 3 stars!");
+    else if (!r.perfect) html("p", "", body, "Get every answer right the first time for a perfect lesson!");
     sfx("fanfare");
     if (r.stars === 3) confetti();
-    speak(r.stars === 3 ? "Perfect! You're a 5-Out superstar!" : r.stars === 2 ? "Great job! Lesson complete!" : "You did it! Lesson complete!");
+    speak(r.perfect ? "Perfect! You're a 5-Out superstar!" : r.stars === 3 ? "Awesome job! Three stars!"
+      : r.stars === 2 ? "Great job! Lesson complete!" : "You did it! Lesson complete!");
   }, { mood: "cheer" });
 
   // 2. XP, counted up, and how today's challenges moved

@@ -532,3 +532,18 @@ h2 .ic.inline { width: 1.2em; height: 1.2em; }
    button was out of reach). */
 #pathScroll, #binderScroll, .scrollbody { min-height: 0; -webkit-overflow-scrolling: touch; }
 .sheet h2 .glyph-badge .ic { width: 28px; height: 28px; margin: 0; }
+/* Keep the lesson panel one steady height (room for 5 lines from Coach and one row
+   of buttons), so the court never slides up and down between questions. On iPhone
+   a sliding court could leave a ghost copy of its top behind for a moment. The
+   court also gets its own drawing layer, so even a move repaints cleanly. */
+.talkrow { min-height: calc(5 * 1.2rem * 1.32 + 38px); }
+#buttons { min-height: 59px; }
+#court { transform: translateZ(0); }
+@media (orientation: landscape) and (max-height: 560px) {
+  .talkrow { min-height: 0; }
+  #buttons { min-height: 0; }
+}
+@media (max-width: 380px) and (orientation: portrait) {
+  #panel .bubble { font-size: 1.08rem; }
+  .talkrow { min-height: calc(5 * 1.08rem * 1.32 + 38px); }
+}
