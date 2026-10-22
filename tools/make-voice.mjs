@@ -12,8 +12,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const VOICE = "am_michael"; // Kokoro's male US voices: am_michael, am_fenrir, am_puck, am_echo
-const SPEED = "0.95";       // 1.0 is normal; a little slower for young kids
+const VOICE = "am_adam";    // Kokoro's male US voices: am_adam, am_michael, am_fenrir, am_puck, am_echo
+const SPEED = "1.1";        // 1.0 is normal; Clifton picked Adam a little faster
 const NARRATE = process.env.NARRATE || path.join(os.homedir(), "work/claude-toolkit/narration/narrate.py");
 const PYTHON = process.env.KOKORO_PYTHON || path.join(os.homedir(), ".local/share/cru-narration/kokoro-venv/bin/python");
 
@@ -50,6 +50,7 @@ for (const m of code.matchAll(literal)) {
     variants = variants.flatMap(v => vals.map(val => v.split("${" + e + "}").join(val)));
   }
   if (!usable) continue; // a template that is not speech (CSS, transforms and so on)
+  if (/^#[0-9a-f]{3,8}$/i.test(variants[0]) || /^M-?[\d.]/.test(variants[0])) continue; // colors and SVG paths
   for (const v of variants) {
     const t = cleanSpeech(v.replace(/\\'/g, "'"));
     // Speech starts like a sentence; class names and other code strings start lowercase.

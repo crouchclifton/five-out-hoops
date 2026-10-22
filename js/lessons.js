@@ -491,7 +491,11 @@ async function lesson1() {
   drawSpots({ labels: true, decoys: true });
   const bunch = [{ x: 46, y: 70 }, { x: 55, y: 71 }, { x: 50, y: 78 }, { x: 43, y: 79 }, { x: 57, y: 80 }];
   bunch.forEach((b, i) => makePlayer(i + 1, b.x, b.y, null));
-  await next("Uh oh! Everyone is <b>bunched up</b> by the hoop. That makes it easy for the defense. Let's spread out!");
+  // The coach acts out the "uh oh" with his worried face; the voice model can't say it naturally.
+  const unbunch = next("Everyone is <b>bunched up</b> by the hoop! That makes it easy for the defense. Let's spread out!");
+  lessonCoach.mood("oops");
+  await unbunch;
+  lessonCoach.mood("idle");
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
     setProgress(qs.length + i, total);

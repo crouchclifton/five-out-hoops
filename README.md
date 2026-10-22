@@ -23,4 +23,4 @@ Sound comes from files, not the phone's built-in speech, because iPhone Safari's
 - `voice/` holds a recorded clip for every line the game says, made with the open-source Kokoro voice on a Mac (nothing sent to an outside service). After changing any game text, run `node tools/make-voice.mjs` to record new clips and delete old ones. It needs the Kokoro setup from Clifton's `claude-toolkit/narration` folder.
 - `sfx/` holds the sound effects, built by `python3 tools/make-sfx.py`.
 
-`voices.html` and `samples/` are a temporary page for choosing the voice.
+The voice is Kokoro's `am_adam` at 1.1x speed, picked by Clifton from samples on 2026-10-22.

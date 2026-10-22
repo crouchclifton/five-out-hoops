@@ -1,6 +1,8 @@
 1 top, 2 wings, 2 corners. That's the 5-Out!
+1. Tap the Share button at the bottom of Safari.2. Scroll down and tap Add to Home Screen.3. Tap Add.Then always play from the new 5-Out Hoops icon so your stars and streak are saved.
 3, 2, 1, GO!
 ATTACK!
+Add to Home Screen
 After you pass, don't stand still. Cut to the hoop!
 Attack!
 Awesome!
@@ -19,6 +21,7 @@ Dribble Dash! Tap left, right, left, right as fast as you can to beat the defend
 Drive!
 Erase all stars, XP, streak and medals on this phone?
 Everyone fills the open spot next to them!
+Everyone is bunched up by the hoop! That makes it easy for the defense. Let's spread out!
 FINISH!
 Fill the Spot
 Find the Spots
@@ -51,6 +54,7 @@ Give and go, attack, big game
 Gold medal! You're a superstar!
 Good eyes! Not open, so we keep moving.
 Good try! Play again to win a medal!
+Got it
 Great job! Lesson complete!
 Great read!
 Hi! I'm Coach Bounce! Tap the green circle to start your first lesson!
@@ -69,10 +73,6 @@ Look! number 2's defender is sleeping way back. number 2 is OPEN. Pass it back!
 Look! number 3's defender is sleeping way back. number 3 is OPEN. Pass it back!
 Look! number 4's defender is sleeping way back. number 4 is OPEN. Pass it back!
 Look! number 5's defender is sleeping way back. number 5 is OPEN. Pass it back!
-M-1.6 -.6 L-.4 -.1 M1.6 -.6 L.4 -.1 M-1 1.3 Q0 .6 1 1.3
-M-1.9 0 H1.9 M0 -1.9 V1.9
-M10 96 L10 80 A41 41 0 0 1 90 80 L90 96
-M38 .5 A12 12 0 0 0 62 .5
 Made it!
 New best!
 New bonus game!
@@ -172,7 +172,6 @@ Too far! A defender could steal that. Pass to the teammate right next to you.
 Too long!
 Too short!
 Too slow!
-Uh oh! Everyone is bunched up by the hoop. That makes it easy for the defense. Let's spread out!
 Unit 1: The 5-Out
 Unit 2: Read the Defense
 Use all 3 rules and score as many points as you can!
@@ -193,7 +192,6 @@ You know when to attack!
 You unlocked a new bonus game!
 You're a 5-Out champion! Pick any bonus game!
 Your defender is standing between you and the hoop. Pass it to a teammate!
-number 0891b2
 number 1 beat the defender! Pass it back!
 number 1 comes right back to the corner.
 number 1 is covered. No pass this time.
@@ -204,11 +202,6 @@ number 1 passes to the wing.
 number 1's defender is in the way. Look to pass.
 number 1's defender is not in the way. Attack the basket!
 number 1, you have the ball! Is your defender in the way? Drive or pass?
-number 16a34a
-number 172554
-number 1d3557
-number 1e40af
-number 1f2937
 number 2 beat the defender! Pass it back!
 number 2 comes right back to the corner.
 number 2 is covered. No pass this time.
@@ -219,7 +212,6 @@ number 2 passes to the wing.
 number 2's defender is in the way. Look to pass.
 number 2's defender is not in the way. Attack the basket!
 number 2, you have the ball! Is your defender in the way? Drive or pass?
-number 2563eb
 number 3 beat the defender! Pass it back!
 number 3 comes right back to the corner.
 number 3 is covered. No pass this time.
@@ -250,9 +242,3 @@ number 5 passes to the wing.
 number 5's defender is in the way. Look to pass.
 number 5's defender is not in the way. Attack the basket!
 number 5, you have the ball! Is your defender in the way? Drive or pass?
-number 58cc02
-number 60a5fa
-number 7c2d12
-number 7f1d1d
-number 9333ea
-number 94a3b8
