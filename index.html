@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1d3557">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>5-Out Hoops</title>
+<style>
+  :root {
+    --navy: #1d3557; --sky: #e0f2fe; --gold: #fde047; --red: #ef4444; --green: #16a34a;
+    --font: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--navy); color: #0f172a; font-family: var(--font);
+    user-select: none; -webkit-user-select: none; touch-action: manipulation; overscroll-behavior: none; }
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; }
+  .hidden { display: none !important; }
+
+  /* ---------- Home ---------- */
+  #home { overflow-y: auto; align-items: center; padding: max(16px, env(safe-area-inset-top)) 16px 24px;
+    background: radial-gradient(circle at 50% 0%, #2b4c7e, var(--navy) 70%); color: #fff; }
+  #home h1 { font-size: 2.4rem; margin: 8px 0 0; letter-spacing: .5px; text-align: center; }
+  #home .sub { opacity: .85; margin: 4px 0 14px; font-size: 1.1rem; text-align: center; }
+  .rules { background: #fff; color: #0f172a; border-radius: 18px; padding: 12px 16px; width: 100%; max-width: 460px; }
+  .rules h2 { margin: 0 0 6px; font-size: 1.15rem; }
+  .rules ol { margin: 0; padding-left: 1.4em; font-size: 1.05rem; line-height: 1.5; }
+  .levels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 460px; margin-top: 14px; }
+  .lvl { border: 0; border-radius: 18px; padding: 12px 8px; background: #f8fafc; color: #0f172a; font-size: 1.05rem;
+    font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: 0 4px 0 #94a3b8; }
+  .lvl:active { transform: translateY(3px); box-shadow: 0 1px 0 #94a3b8; }
+  .lvl .em { font-size: 1.8rem; }
+  .lvl .num { font-size: .8rem; opacity: .6; font-weight: 600; }
+  .lvl .st { font-size: 1rem; letter-spacing: 2px; }
+  .wide { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 10px; background: var(--gold); box-shadow: 0 4px 0 #ca8a04; }
+  .linkbtn { background: none; border: 0; color: #cbd5e1; text-decoration: underline; font-size: 1rem; margin-top: 16px; }
+
+  /* ---------- Game ---------- */
+  #game { background: var(--navy); }
+  header { display: flex; align-items: center; gap: 8px; padding: max(8px, env(safe-area-inset-top)) 10px 6px; color: #fff; }
+  header .title { flex: 1; font-weight: 800; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header .pill { background: rgba(255,255,255,.15); border-radius: 999px; padding: 4px 10px; font-weight: 800; white-space: nowrap; }
+  .iconbtn { background: rgba(255,255,255,.15); border: 0; color: #fff; font-size: 1.3rem; width: 44px; height: 44px; border-radius: 12px; }
+  #main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #courtWrap { flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 6px; }
+  #court { width: 100%; height: 100%; max-width: 640px; display: block; touch-action: none; }
+  @media (orientation: landscape) and (max-height: 560px) { #courtWrap { align-items: center; } }
+  #panel { background: #fff; border-radius: 22px 22px 0 0; padding: 14px 14px max(14px, env(safe-area-inset-bottom));
+    min-height: 150px; display: flex; flex-direction: column; gap: 10px; }
+  #prompt { font-size: 1.25rem; line-height: 1.35; font-weight: 600; min-height: 2.7em; }
+  #prompt.hint { color: #b45309; }
+  #prompt b { color: #1d4ed8; }
+  #prompt.hint b { color: #b45309; }
+  #buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .choice { flex: 1 1 40%; min-height: 56px; border: 0; border-radius: 16px; font-size: 1.15rem; font-weight: 800;
+    background: #2563eb; color: #fff; box-shadow: 0 4px 0 #1e3a8a; padding: 8px 10px; }
+  .choice:active { transform: translateY(3px); box-shadow: 0 1px 0 #1e3a8a; }
+  .choice.alt { background: #e2e8f0; color: #0f172a; box-shadow: 0 4px 0 #94a3b8; }
+  .shake { animation: shake .35s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  @media (orientation: landscape) and (max-height: 560px) {
+    #main { flex-direction: row; }
+    #panel { width: 42%; border-radius: 22px 0 0 0; justify-content: center; }
+    #prompt { font-size: 1.1rem; }
+  }
+
+  /* SVG bits */
+  .zone { fill: rgba(255,255,255,.01); cursor: pointer; }
+  .zone.glow { stroke: var(--gold); stroke-width: .8; stroke-dasharray: 2 1.4; animation: dash 1s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -6.8; } }
+  .spot { fill: rgba(255,255,255,.18); stroke: #fff; stroke-width: .5; stroke-dasharray: 1.2 1; }
+  .spotlabel { font-size: 2.6px; fill: #fff; font-weight: 800; paint-order: stroke; stroke: rgba(29,53,87,.6); stroke-width: .6; }
+  .ptext { font-size: 4.2px; font-weight: 900; fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .zz { font-size: 3.6px; text-anchor: middle; pointer-events: none; }
+  .fx { font-size: 6px; font-weight: 900; text-anchor: middle; fill: var(--gold); stroke: #7c2d12; stroke-width: .5; paint-order: stroke;
+    pointer-events: none; animation: floatUp 1.3s ease-out forwards; transform-box: fill-box; }
+  @keyframes floatUp { from { opacity: 1; transform: translateY(0) scale(.8); } 20% { transform: translateY(-1px) scale(1.15); } to { opacity: 0; transform: translateY(-10px) scale(1); } }
+  .pulse { fill: none; stroke: var(--gold); stroke-width: .9; animation: pulse 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pulse { 50% { transform: scale(1.25); opacity: .5; } }
+  .qmark { font-size: 6px; font-weight: 900; fill: var(--gold); text-anchor: middle; dominant-baseline: central; stroke: #1d3557; stroke-width: .4; paint-order: stroke; pointer-events: none; }
+
+  /* ---------- Done ---------- */
+  #done { align-items: center; justify-content: center; text-align: center; color: #fff; padding: 24px;
+    background: radial-gradient(circle at 50% 30%, #2b4c7e, var(--navy) 70%); }
+  #done .stars { font-size: 3.6rem; letter-spacing: 6px; margin: 8px 0; }
+  #done h2 { font-size: 2rem; margin: 0; }
+  #done p { font-size: 1.2rem; opacity: .9; max-width: 420px; }
+  #done .row { display: flex; gap: 12px; margin-top: 12px; width: 100%; max-width: 420px; }
+  .confetti { position: fixed; top: -40px; font-size: 1.8rem; animation: fall linear forwards; pointer-events: none; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+
+  /* ---------- Coach sheet ---------- */
+  #coach { background: rgba(15,23,42,.7); align-items: center; justify-content: center; padding: 16px; z-index: 5; }
+  #coach .card { background: #fff; border-radius: 18px; padding: 18px; max-width: 560px; max-height: 100%; overflow-y: auto; font-size: 1rem; line-height: 1.45; user-select: text; -webkit-user-select: text; }
+  #coach h2 { margin-top: 0; }
+  #coach table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  #coach td, #coach th { border: 1px solid #cbd5e1; padding: 6px; vertical-align: top; text-align: left; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen">
+  <h1>🏀 5-Out Hoops</h1>
+  <div class="sub">Learn the 5-Out offense!</div>
+  <div class="rules">
+    <h2>The 3 Big Rules</h2>
+    <ol>
+      <li><b>Attack the basket</b> when you can.</li>
+      <li><b>Pass and move.</b> After you pass, cut to the hoop!</li>
+      <li><b>Fill the open spot.</b></li>
+    </ol>
+  </div>
+  <div class="levels" id="levelGrid"></div>
+  <button class="linkbtn" id="coachBtn">For coaches and parents</button>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen hidden">
+  <header>
+    <button class="iconbtn" id="backBtn" aria-label="Back">⬅</button>
+    <div class="title" id="lvlTitle"></div>
+    <div class="pill" id="progress"></div>
+    <div class="pill" id="score">🏀 0</div>
+    <button class="iconbtn" id="soundBtn" aria-label="Sound">🔊</button>
+  </header>
+  <div id="main">
+    <div id="courtWrap"><svg id="court" viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet"></svg></div>
+    <div id="panel"><div id="prompt"></div><div id="buttons"></div></div>
+  </div>
+</div>
+
+<!-- DONE -->
+<div id="done" class="screen hidden">
+  <h2 id="doneTitle">Great job!</h2>
+  <div class="stars" id="doneStars">⭐⭐⭐</div>
+  <p id="doneMsg"></p>
+  <div class="row">
+    <button class="choice alt" id="homeBtn">🏠 Home</button>
+    <button class="choice" id="againBtn">🔁 Again</button>
+  </div>
+  <div class="row"><button class="choice" id="nextBtn" style="background:#16a34a;box-shadow:0 4px 0 #14532d">Next level ▶</button></div>
+</div>
+
+<!-- COACH NOTES -->
+<div id="coach" class="screen hidden">
+  <div class="card">
+    <h2>For coaches and parents</h2>
+    <p>This game teaches the basics of the <b>5-Out motion offense</b>, following Coach Russ's video
+      <a href="https://youtu.be/PiR6-4Erhjw" target="_blank" rel="noopener">"5-Out Motion Offense: A Complete Guide for Coaches"</a>.</p>
+    <p><b>Setup:</b> all five players start outside the 3-point line. One at the top, two on the wings, two in the corners. It is positionless, so anyone can start anywhere.</p>
+    <p><b>The three rules:</b> (1) attack the basket whenever you can, (2) pass and move (never stand still after a pass), (3) fill the open spot.</p>
+    <table>
+      <tr><th>Pass</th><th>What happens</th></tr>
+      <tr><td>Top to wing</td><td>Passer cuts to the hoop looking for the give and go, then goes to the <b>opposite corner</b>. The other wing fills the top, and that corner fills the wing.</td></tr>
+      <tr><td>Wing to corner</td><td>Passer cuts, then goes to the <b>opposite corner</b>. Top fills the wing, other wing fills the top, other corner fills that wing.</td></tr>
+      <tr><td>Corner to wing</td><td>Passer cuts, then comes <b>back to the same corner</b>.</td></tr>
+      <tr><td>Wing to top</td><td>Passer cuts, then goes to the <b>same-side corner</b>. That corner moves up to fill the wing.</td></tr>
+    </table>
+    <p><b>The six levels:</b> 1 Find the Spots, 2 Pass and Cut, 3 Fill the Spot, 4 Give and Go (read if the cutter is open), 5 Attack (read if your defender is in the way), 6 Big Game (all of it). "Watch the 5-Out" plays the offense by itself with narration, good for a team huddle around a phone.</p>
+    <p><b>Left out on purpose</b> for 7 to 9 year olds: screens away, on-ball screens, backdoor cuts and post seals. The video covers them once the basic movement is solid.</p>
+    <p>Skip passes (top to corner, wing to wing) count as mistakes in the game, to build the habit of passing to the teammate next to you.</p>
+    <button class="choice" id="coachClose" style="width:100%">Close</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+// ---------- Court geometry (viewBox 0..100, basket at the bottom) ----------
+const HOOP = { x: 50, y: 89 };
+const SPOTS = {
+  T:  { x: 50, y: 36 },
+  LW: { x: 15, y: 56 }, RW: { x: 85, y: 56 },
+  LC: { x: 5,  y: 88 }, RC: { x: 95, y: 88 },
+};
+const DECOYS = [{ x: 50, y: 72 }, { x: 36, y: 62 }, { x: 64, y: 62 }, { x: 41, y: 83 }];
+// The five spots sit in a line around the arc. "Next to" means next in this line.
+const LINE = ["LC", "LW", "T", "RW", "RC"];
+// Legal passes: only to the teammate next to you (no skip passes).
+const PASSES = { T: ["LW", "RW"], LW: ["T", "LC"], RW: ["T", "RC"], LC: ["LW"], RC: ["RW"] };
+const spotWord = s => s === "T" ? "top" : (s[1] === "W" ? "wing" : "corner");
+const COLORS = ["#2563eb", "#16a34a", "#9333ea", "#0891b2", "#db2777"];
+
+// After a pass from `from` to `to`, the passer cuts and every spot that opens
+// is filled by the teammate next to it (never the one holding the ball).
+// The cutter ends in whichever spot is left empty last.
+// This one rule reproduces all four rotations in the video.
+function rotation(from, to) {
+  const filled = new Set([to]);
+  const fills = [];
+  let empty = from;
+  for (;;) {
+    const i = LINE.indexOf(empty);
+    const nb = [LINE[i - 1], LINE[i + 1]].filter(s => s && !filled.has(s));
+    if (!nb.length) return { fills, dest: empty };
+    fills.push([nb[0], empty]);
+    filled.add(empty);
+    empty = nb[0];
+  }
+}
+
+// ---------- Game state ----------
+let svg, layers = {}, players = [], defenders = [], ball = null;
+let RUN = 0, mistakes = 0, points = 0, current = null;
+const ABORT = new Error("abort");
+const OK = { ok: true };
+let SPEED = 32;
+let soundOn = localStorage.getItem("fiveout-sound") !== "off";
+
+// ---------- Sound and voice ----------
+let audio;
+function tone(freq, dur, type = "sine", when = 0, vol = 0.12) {
+  if (!soundOn) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.value = freq;
+    const t = audio.currentTime + when;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+function sfx(kind) {
+  if (kind === "good") { tone(660, .12); tone(880, .18, "sine", .1); }
+  else if (kind === "bad") { tone(200, .25, "square", 0, .05); }
+  else if (kind === "pass") { tone(420, .08, "triangle"); }
+  else if (kind === "swish") { tone(523, .1); tone(659, .1, "sine", .08); tone(784, .1, "sine", .16); tone(1047, .25, "sine", .24); }
+}
+function speak(html) {
+  if (!soundOn || !window.speechSynthesis) return;
+  const t = html.replace(/<[^>]+>/g, "").replace(/#(\d)/g, "number $1")
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "").replace(/\s+/g, " ").trim();
+  speechSynthesis.cancel();
+  if (!t) return;
+  const u = new SpeechSynthesisUtterance(t);
+  u.rate = 0.95; u.pitch = 1.1;
+  speechSynthesis.speak(u);
+}
+function say(html, hint = false) {
+  const p = $("#prompt");
+  p.innerHTML = html;
+  p.classList.toggle("hint", hint);
+  speak(html);
+}
+
+// ---------- Timing ----------
+const sleepRaw = ms => new Promise(r => setTimeout(r, ms));
+async function sleep(ms) { const id = RUN; await sleepRaw(ms); if (id !== RUN) throw ABORT; }
+
+// ---------- Drawing ----------
+function drawCourt() {
+  svg = $("#court");
+  svg.innerHTML = "";
+  el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "#e8b26a" }, svg);
+  for (let i = 0; i < 100; i += 5) el("rect", { x: i, y: 0, width: 2.5, height: 100, fill: "#dfa75c", opacity: .55 }, svg);
+  el("rect", { x: 36, y: 63, width: 28, height: 33, fill: "#1d3557", opacity: .22 }, svg);
+  const g = el("g", { stroke: "#fff", fill: "none", "stroke-width": .7 }, svg);
+  el("rect", { x: .5, y: .5, width: 99, height: 95.5 }, g);
+  el("path", { d: "M38 .5 A12 12 0 0 0 62 .5" }, g);
+  el("rect", { x: 36, y: 63, width: 28, height: 33 }, g);
+  el("circle", { cx: 50, cy: 63, r: 9 }, g);
+  el("path", { d: "M10 96 L10 80 A41 41 0 0 1 90 80 L90 96", "stroke-width": .9 }, g);
+  el("line", { x1: 44, y1: 93, x2: 56, y2: 93, "stroke-width": 1.2 }, g);
+  el("circle", { cx: HOOP.x, cy: HOOP.y, r: 2.2, stroke: "#f97316", "stroke-width": .9 }, svg);
+  for (const k of ["spots", "markers", "defs", "players", "ball", "zones", "fx"]) layers[k] = el("g", {}, svg);
+  layers.fx.setAttribute("pointer-events", "none");
+  layers.markers.setAttribute("pointer-events", "none");
+}
+function drawSpots({ labels = true, decoys = false } = {}) {
+  layers.spots.innerHTML = "";
+  const all = Object.entries(SPOTS).map(([k, s]) => ({ k, ...s }));
+  if (decoys) DECOYS.forEach((d, i) => all.push({ k: "d" + i, ...d }));
+  for (const s of all) {
+    el("circle", { cx: s.x, cy: s.y, r: 4.6, class: "spot" }, layers.spots);
+    if (s.k[0] !== "d") {
+      // Labels sit above the spot (defenders stand below it); corner labels hug the sideline.
+      const anchor = s.k === "LC" ? "start" : s.k === "RC" ? "end" : "middle";
+      const lx = s.k === "LC" ? 1.5 : s.k === "RC" ? 98.5 : s.x;
+      const t = el("text", { x: lx, y: s.y - 6.2, class: "spotlabel", "text-anchor": anchor, "data-spot": s.k }, layers.spots);
+      t.textContent = spotWord(s.k).toUpperCase();
+      if (!labels) t.style.display = "none";
+    }
+  }
+}
+function revealLabel(k) { const t = layers.spots.querySelector(`[data-spot="${k}"]`); if (t) t.style.display = ""; }
+
+function makePlayer(id, x, y, spot) {
+  const g = el("g", {}, layers.players);
+  const ring = el("circle", { r: 5.8, class: "pulse", style: "display:none" }, g);
+  el("circle", { r: 4, fill: COLORS[id - 1], stroke: "#fff", "stroke-width": .7 }, g);
+  el("text", { class: "ptext", y: .2 }, g).textContent = id;
+  const p = { id, x, y, spot, g, ring, anim: null };
+  players.push(p);
+  return p;
+}
+function makeDefender(p) {
+  const g = el("g", {}, layers.defs);
+  el("circle", { r: 3.3, fill: "#ef4444", stroke: "#7f1d1d", "stroke-width": .5 }, g);
+  el("path", { d: "M-1.6 -.6 L-.4 -.1 M1.6 -.6 L.4 -.1 M-1 1.3 Q0 .6 1 1.3", stroke: "#fff", "stroke-width": .45, fill: "none", "stroke-linecap": "round" }, g);
+  const zz = el("text", { class: "zz", x: 3.2, y: -3 }, g);
+  zz.textContent = "💤";
+  const t = defTarget({ p, mode: "guard" });
+  const d = { p, x: t.x, y: t.y, mode: "guard", fixed: null, g, zz };
+  defenders.push(d);
+  return d;
+}
+function makeBall(holder) {
+  const g = el("g", {}, layers.ball);
+  el("circle", { r: 1.9, fill: "#f97316", stroke: "#7c2d12", "stroke-width": .35 }, g);
+  el("path", { d: "M-1.9 0 H1.9 M0 -1.9 V1.9", stroke: "#7c2d12", "stroke-width": .25 }, g);
+  ball = { x: holder.x, y: holder.y, holder, g, anim: null };
+}
+const holdPos = p => ({ x: p.x + 2.9, y: p.y + 2.4 });
+const at = spot => players.find(p => p.spot === spot);
+const defOf = p => defenders.find(d => d.p === p);
+
+// Where a defender wants to stand.
+function defTarget(d) {
+  if (d.mode === "lag") return d.fixed;
+  const p = d.p;
+  const dx = HOOP.x - p.x, dy = HOOP.y - p.y, L = Math.hypot(dx, dy) || 1;
+  const ux = dx / L, uy = dy / L;
+  if (d.mode === "sleep") {
+    // Off to the side and a step back: the path to the hoop is wide open.
+    let px = -uy, py = ux;
+    if (py > 0 || (py === 0 && (p.x >= 50 ? px > 0 : px < 0))) { px = -px; py = -py; }
+    return clamp({ x: p.x + px * 9 - ux * 2, y: p.y + py * 9 - uy * 2 });
+  }
+  const gap = Math.min(7, L * 0.6); // between the player and the hoop
+  return clamp({ x: p.x + ux * gap, y: p.y + uy * gap });
+}
+const clamp = q => ({ x: Math.max(3, Math.min(97, q.x)), y: Math.max(3, Math.min(97, q.y)) });
+
+// ---------- Animation loop ----------
+const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+function tween(e, x, y, dur) {
+  return new Promise(resolve => { e.anim = { sx: e.x, sy: e.y, tx: x, ty: y, t0: performance.now(), dur, resolve }; });
+}
+function moveTo(e, x, y, speed = SPEED) {
+  const dist = Math.hypot(x - e.x, y - e.y);
+  return tween(e, x, y, Math.max(150, dist / speed * 1000));
+}
+function step(e, now) {
+  const a = e.anim;
+  if (!a) return;
+  const k = Math.min(1, (now - a.t0) / a.dur), s = ease(k);
+  e.x = a.sx + (a.tx - a.sx) * s; e.y = a.sy + (a.ty - a.sy) * s;
+  if (k >= 1) { e.anim = null; a.resolve(); }
+}
+function frame(now) {
+  for (const p of players) { step(p, now); p.g.setAttribute("transform", `translate(${p.x} ${p.y})`); }
+  for (const d of defenders) {
+    const t = defTarget(d);
+    d.x += (t.x - d.x) * 0.1; d.y += (t.y - d.y) * 0.1;
+    d.g.setAttribute("transform", `translate(${d.x} ${d.y})`);
+    d.zz.style.display = (d.mode === "sleep" || d.mode === "lag") ? "" : "none";
+  }
+  if (ball) {
+    if (ball.anim) step(ball, now);
+    else if (ball.holder) { const h = holdPos(ball.holder); ball.x = h.x; ball.y = h.y; }
+    ball.g.setAttribute("transform", `translate(${ball.x} ${ball.y})`);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- Effects ----------
+function floatText(x, y, txt) {
+  const t = el("text", { x: Math.max(18, Math.min(82, x)), y: Math.max(8, y), class: "fx" }, layers.fx);
+  t.textContent = txt;
+  setTimeout(() => t.remove(), 1400);
+}
+function emptyMarker(spot) {
+  const s = SPOTS[spot];
+  const g = el("g", {}, layers.markers);
+  el("circle", { cx: s.x, cy: s.y, r: 4.6, class: "pulse" }, g);
+  el("text", { x: s.x, y: s.y, class: "qmark" }, g).textContent = "?";
+  return g;
+}
+function setScore() { $("#score").textContent = "🏀 " + points; }
+function setProgress(txt) { $("#progress").textContent = txt || ""; $("#progress").style.display = txt ? "" : "none"; }
+
+// ---------- Asking the player ----------
+// Shows a question with tap targets on the court and/or buttons.
+// Resolves only with a correct answer; wrong answers count as mistakes and show a hint.
+function askTap({ text, zones = [], buttons = [], check }) {
+  const id = RUN;
+  say(text);
+  return new Promise(resolve => {
+    let locked = false;
+    const done = (key, src) => {
+      if (id !== RUN || locked) return;
+      const r = check ? check(key) : OK;
+      if (r.ok) {
+        locked = true;
+        layers.zones.innerHTML = ""; $("#buttons").innerHTML = "";
+        if (check) sfx("good");
+        resolve(key);
+      } else {
+        mistakes++;
+        sfx("bad");
+        say("🤔 " + r.msg, true);
+        const panel = $("#panel"); panel.classList.remove("shake"); void panel.offsetWidth; panel.classList.add("shake");
+      }
+    };
+    layers.zones.innerHTML = "";
+    for (const z of zones) {
+      const c = el("circle", { cx: z.x, cy: z.y, r: z.r || 5.5, class: "zone" + (z.glow ? " glow" : "") }, layers.zones);
+      c.addEventListener("pointerdown", e => { e.preventDefault(); done(z.key, c); });
+    }
+    const bw = $("#buttons");
+    bw.innerHTML = "";
+    for (const b of buttons) {
+      const btn = document.createElement("button");
+      btn.className = "choice" + (b.alt ? " alt" : "");
+      btn.innerHTML = b.label;
+      btn.onclick = () => done(b.key, btn);
+      bw.appendChild(btn);
+    }
+  });
+}
+const next = (text, label = "Next ▶") => askTap({ text, buttons: [{ key: "n", label }] });
+
+// ---------- Basketball actions ----------
+async function passBall(to) {
+  ball.holder = null;
+  sfx("pass");
+  const h = holdPos(to);
+  await tween(ball, h.x, h.y, Math.max(260, Math.hypot(h.x - ball.x, h.y - ball.y) / 85 * 1000));
+  ball.holder = to;
+}
+async function layup(p) {
+  ball.holder = null;
+  await tween(ball, (ball.x + HOOP.x) / 2, Math.min(ball.y, HOOP.y) - 9, 300);
+  await tween(ball, HOOP.x, HOOP.y, 300);
+  sfx("swish");
+  floatText(HOOP.x, HOOP.y - 8, "SWISH! +2");
+  points += 2; setScore();
+  await tween(ball, HOOP.x, 94, 250);
+}
+async function driveAndScore(p) {
+  floatText(p.x, p.y - 6, "ATTACK!");
+  await moveTo(p, HOOP.x + (p.x - HOOP.x) * 0.12, HOOP.y - 7, 42);
+  await layup(p);
+}
+const cutPoint = from => ({ x: 50 + (SPOTS[from].x - 50) * 0.15, y: 78 });
+
+// Everyone back to their spot, ball to the top. Used after a basket.
+async function resetAfterScore() {
+  await sleep(500);
+  defenders.forEach(d => d.mode = "guard");
+  await Promise.all(players.map(p => moveTo(p, SPOTS[p.spot].x, SPOTS[p.spot].y)));
+  await passBall(at("T"));
+  await sleep(300);
+}
+
+function setupFive(withDefense) {
+  players = []; defenders = []; ball = null;
+  ["T", "LW", "RW", "LC", "RC"].forEach((s, i) => makePlayer(i + 1, SPOTS[s].x, SPOTS[s].y, s));
+  if (withDefense) players.forEach(makeDefender);
+  makeBall(at("T"));
+}
+
+// One trip of the ball: maybe a drive, then pass, cut, give-and-go read, and fills.
+// Each `ask*` option turns a step into a question for the player.
+async function possession(o = {}) {
+  const N = o.narrate;
+  const holder = ball.holder;
+  const from = holder.spot;
+  const hd = defOf(holder);
+
+  // 1. Attack the basket?
+  if (o.drive) {
+    if (hd) hd.mode = o.drive === "open" ? "sleep" : "guard";
+    await sleep(700);
+    if (o.askDrive) {
+      await askTap({
+        text: `#${holder.id}, you have the ball! Is your defender in the way? <b>Drive</b> or <b>pass</b>?`,
+        zones: [{ key: "drive", x: HOOP.x, y: HOOP.y - 4, r: 7, glow: true }],
+        buttons: [{ key: "drive", label: "🏃 Drive!" }, { key: "pass", label: "🤝 Pass" }],
+        check: k => o.drive === "open"
+          ? (k === "drive" ? OK : { ok: false, msg: "Look! Your defender is 💤 and NOT in the way. Rule #1: <b>attack the basket!</b>" })
+          : (k === "pass" ? OK : { ok: false, msg: "Your defender is standing between you and the hoop. <b>Pass it</b> to a teammate!" }),
+      });
+    } else if (N) {
+      say(o.drive === "open" ? `#${holder.id}'s defender is not in the way. <b>Attack the basket!</b>` : `#${holder.id}'s defender is in the way. Look to pass.`);
+      await sleep(1800);
+    }
+    if (o.drive === "open") {
+      await driveAndScore(holder);
+      if (N) say("Rule #1: <b>Attack the basket</b> when you can! 🏀");
+      await resetAfterScore();
+      return "score";
+    }
+    if (o.askDrive) { say("✅ Smart! The defender is in the way, so we pass."); await sleep(1100); }
+  }
+
+  // 2. Pass to a teammate next to you.
+  const legal = PASSES[from];
+  let to;
+  if (o.askPass) {
+    to = await askTap({
+      text: o.passText || `Pass the ball! Tap a teammate <b>next to</b> #${holder.id}.`,
+      zones: players.filter(p => p !== holder).map(p => ({ key: p.spot, x: p.x, y: p.y, glow: true })),
+      check: k => legal.includes(k) ? OK : { ok: false, msg: "Too far! A defender could steal that. Pass to the teammate <b>right next to you</b>." },
+    });
+  } else {
+    let c = legal;
+    if (o.preferFills) { const f = c.filter(s => rotation(from, s).fills.length); if (f.length) c = f; }
+    to = pick(c);
+  }
+  if (N || o.narratePass) { say(`#${holder.id} passes to the ${spotWord(to)}.`); }
+  await passBall(at(to));
+  if (N || o.narratePass) await sleep(900);
+
+  // 3. Pass and MOVE: the passer cuts to the hoop.
+  if (o.askCut) {
+    await askTap({
+      text: `Nice pass! Now what should #${holder.id} do?`,
+      zones: [{ key: "cut", x: HOOP.x, y: HOOP.y - 6, r: 8, glow: true }],
+      buttons: [{ key: "stay", label: "🧍 Stand still", alt: true }, { key: "cut", label: "🏃 Cut to the hoop!" }],
+      check: k => k === "cut" ? OK : { ok: false, msg: "Rule #2: <b>Pass and MOVE!</b> Never stand still after you pass. Cut to the hoop!" },
+    });
+  } else if (N || o.narratePass) {
+    say(`Pass and cut! #${holder.id} cuts to the hoop. ✂️`);
+  }
+  const cutter = holder;
+  cutter.spot = null;
+  const cd = defOf(cutter);
+  const open = o.giveGo === true;
+  if (cd && open) { cd.mode = "lag"; cd.fixed = { x: cd.x, y: cd.y }; }
+  const cp = cutPoint(from);
+  await moveTo(cutter, cp.x, cp.y, 40);
+
+  // 4. Give and go: is the cutter open?
+  let scored = false;
+  if (cd && o.giveGo !== undefined) {
+    await sleep(400);
+    if (o.askGiveGo) {
+      await askTap({
+        text: `#${cutter.id} is cutting! Is #${cutter.id} <b>open</b>?`,
+        zones: [{ key: "pass", x: cutter.x, y: cutter.y, r: 6, glow: true }],
+        buttons: [{ key: "pass", label: `🎯 Pass to #${cutter.id}` }, { key: "hold", label: "✋ Not open", alt: true }],
+        check: k => open
+          ? (k === "pass" ? OK : { ok: false, msg: `Look! #${cutter.id}'s defender is 💤 way back. #${cutter.id} is OPEN. Pass it back!` })
+          : (k === "hold" ? OK : { ok: false, msg: `The defender is right with #${cutter.id}. Not open! Hold the ball.` }),
+      });
+    } else if (N) {
+      say(open ? `#${cutter.id} beat the defender! Pass it back!` : `#${cutter.id} is covered. No pass this time.`);
+      await sleep(1400);
+    }
+    if (open) {
+      say("🎯 <b>Give and go!</b>");
+      await passBall(cutter);
+      await layup(cutter);
+      scored = true;
+    } else if (o.askGiveGo) {
+      say("✅ Good eyes! Not open, so we keep moving.");
+      await sleep(1000);
+    }
+  } else {
+    await sleep(N ? 900 : 300);
+  }
+  if (cd) cd.mode = "guard";
+
+  // 5. Fill the open spot.
+  const rot = rotation(from, to);
+  if (o.askFills) {
+    for (const [a, b] of rot.fills) {
+      const filler = at(a);
+      const mark = emptyMarker(b);
+      await askTap({
+        text: `The <b>${spotWord(b)}</b> spot is empty! Who fills it? Tap a player.`,
+        zones: players.filter(p => p.spot).map(p => ({ key: String(p.id), x: p.x, y: p.y, glow: true })),
+        check: k => {
+          if (k === String(filler.id)) return OK;
+          if (ball.holder && String(ball.holder.id) === k) return { ok: false, msg: "That teammate has the ball! Pick the one <b>right next to</b> the empty spot." };
+          return { ok: false, msg: "Pick the teammate <b>right next to</b> the empty spot. 👀" };
+        },
+      });
+      mark.remove();
+      filler.spot = b;
+      await moveTo(filler, SPOTS[b].x, SPOTS[b].y);
+    }
+    const mark = emptyMarker(rot.dest);
+    await askTap({
+      text: `One spot is still empty. Where does #${cutter.id} go? Tap the <b>empty spot</b>.`,
+      zones: Object.entries(SPOTS).map(([k, s]) => ({ key: k, x: s.x, y: s.y })),
+      check: k => k === rot.dest ? OK : { ok: false, msg: "Someone is already there! Find the spot with the <b>?</b>" },
+    });
+    mark.remove();
+    cutter.spot = rot.dest;
+    await moveTo(cutter, SPOTS[rot.dest].x, SPOTS[rot.dest].y);
+  } else {
+    if (N || o.narrateFill) say(rot.fills.length ? "Everyone <b>fills the open spot</b> next to them! 🔄" : `#${cutter.id} comes right back to the corner.`);
+    const moves = [];
+    let delay = 0;
+    for (const [a, b] of rot.fills) {
+      const f = at(a);
+      f.spot = b;
+      moves.push(sleepRaw(delay).then(() => moveTo(f, SPOTS[b].x, SPOTS[b].y)));
+      delay += 250;
+    }
+    cutter.spot = rot.dest;
+    moves.push(sleepRaw(delay).then(() => moveTo(cutter, SPOTS[rot.dest].x, SPOTS[rot.dest].y)));
+    await Promise.all(moves);
+    await sleep(N ? 1200 : 300);
+  }
+
+  if (scored) { await resetAfterScore(); return "score"; }
+  return "pass";
+}
+
+// ---------- Levels ----------
+const LEVELS = [
+  { title: "Find the Spots", emoji: "📍", run: level1 },
+  { title: "Pass & Cut", emoji: "✂️", run: level2 },
+  { title: "Fill the Spot", emoji: "🧩", run: level3 },
+  { title: "Give & Go", emoji: "🎯", run: level4 },
+  { title: "Attack!", emoji: "⚡", run: level5 },
+  { title: "Big Game", emoji: "🏆", run: level6 },
+];
+
+async function level1() {
+  drawSpots({ labels: false, decoys: true });
+  await next("In 5-Out, there are <b>5 spots</b>, all <b>outside</b> the big curved line. Let's find them!", "Let's go! 🏀");
+  const isRight = (k, q) => q === "T" ? k === "T" : q === "W" ? (k === "LW" || k === "RW") : (k === "LC" || k === "RC");
+  const word = { T: "TOP", W: "WING", C: "CORNER" };
+  const hint = {
+    T: "The <b>top</b> is in the middle, out front, far from the hoop.",
+    W: "<b>Wings</b> are on the sides, like a bird's wings!",
+    C: "<b>Corners</b> are way down low, on the sides by the end line.",
+  };
+  const qs = shuffle(["T", "W", "C"]).concat(shuffle(["T", "W", "C"]));
+  const zones = Object.entries(SPOTS).map(([k, s]) => ({ key: k, x: s.x, y: s.y }))
+    .concat(DECOYS.map((d, i) => ({ key: "d" + i, x: d.x, y: d.y, r: 5 })));
+  for (let i = 0; i < qs.length; i++) {
+    const q = qs[i];
+    setProgress(`${i + 1}/${qs.length + 5}`);
+    const k = await askTap({
+      text: `Tap ${q === "T" ? "the" : "a"} <b>${word[q]}</b> spot.`,
+      zones,
+      check: k => isRight(k, q) ? OK
+        : k[0] === "d" ? { ok: false, msg: "That spot is <b>inside</b> the line. 5-Out spots are all OUTSIDE the 3-point line." }
+        : { ok: false, msg: hint[q] },
+    });
+    revealLabel(k);
+    floatText(SPOTS[k].x, SPOTS[k].y - 6, word[q] + "!");
+  }
+
+  // Part 2: unbunch the team.
+  drawSpots({ labels: true, decoys: true });
+  const bunch = [{ x: 46, y: 70 }, { x: 55, y: 71 }, { x: 50, y: 78 }, { x: 43, y: 79 }, { x: 57, y: 80 }];
+  bunch.forEach((b, i) => makePlayer(i + 1, b.x, b.y, null));
+  await next("Uh oh! Everyone is <b>bunched up</b> by the hoop. That makes it easy for the defense. Let's spread out!");
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    setProgress(`${qs.length + i + 1}/${qs.length + 5}`);
+    p.ring.style.display = "";
+    const k = await askTap({
+      text: `Tap an <b>empty spot</b> for #${p.id}.`,
+      zones,
+      check: k => k[0] === "d" ? { ok: false, msg: "That's <b>inside</b> the line. Pick a spot OUTSIDE the 3-point line." }
+        : at(k) ? { ok: false, msg: "Someone is already there! Pick an <b>empty</b> spot." } : OK,
+    });
+    p.ring.style.display = "none";
+    p.spot = k;
+    await moveTo(p, SPOTS[k].x, SPOTS[k].y, 45);
+  }
+  floatText(50, 50, "SPREAD OUT!");
+  sfx("swish");
+  await next("1 top, 2 wings, 2 corners. That's the <b>5-Out</b>! 🙌", "Finish ⭐");
+}
+
+async function level2() {
+  drawSpots(); setupFive(false);
+  await next("Rule #2: <b>Pass and MOVE!</b> After you pass, don't stand still. Cut to the hoop!", "Let's go! 🏀");
+  const rounds = 5;
+  for (let i = 0; i < rounds; i++) {
+    setProgress(`${i + 1}/${rounds}`);
+    await possession({ askPass: true, askCut: true, narrateFill: true });
+  }
+  await next("You did it! Pass, then <b>cut</b>! ✂️", "Finish ⭐");
+}
+
+async function level3() {
+  drawSpots(); setupFive(false);
+  await next("Rule #3: <b>Fill the open spot!</b> When a teammate cuts, their spot is empty. The teammate <b>next to it</b> slides over.", "Let's go! 🏀");
+  const rounds = 4;
+  let r = 0;
+  while (r < rounds) {
+    setProgress(`${r + 1}/${rounds}`);
+    if (ball.holder.spot[1] === "C") {
+      // A corner pass has nothing to fill: the passer comes right back. Just show it.
+      await possession({ narratePass: true, narrateFill: true });
+      continue;
+    }
+    await possession({ askFills: true, preferFills: true, narratePass: true });
+    floatText(50, 50, "GREAT!");
+    r++;
+  }
+  await next("Awesome! Everyone moves over <b>one spot</b> to fill the hole. 🧩", "Finish ⭐");
+}
+
+async function level4() {
+  drawSpots(); setupFive(true);
+  await next("Pass and cut, then <b>look</b>! If the cutter gets past their defender, pass it right back for a layup. That's a <b>give and go</b>! 🎯", "Let's go! 🏀");
+  const plan = shuffle([true, false, true, false, true, false]);
+  for (let i = 0; i < plan.length; i++) {
+    setProgress(`${i + 1}/${plan.length}`);
+    await possession({ askPass: true, giveGo: plan[i], askGiveGo: true });
+  }
+  await next("You can spot an open cutter! 👀", "Finish ⭐");
+}
+
+async function level5() {
+  drawSpots(); setupFive(true);
+  await next("Rule #1: <b>Attack the basket!</b> If your defender is NOT between you and the hoop, drive and score!", "Let's go! 🏀");
+  const plan = shuffle(["open", "blocked", "open", "blocked", "open", "blocked"]);
+  for (let i = 0; i < plan.length; i++) {
+    setProgress(`${i + 1}/${plan.length}`);
+    await possession({ drive: plan[i], askDrive: true, askPass: true });
+  }
+  await next("You know when to attack! ⚡", "Finish ⭐");
+}
+
+async function level6() {
+  drawSpots(); setupFive(true);
+  await next("Big Game! Use all 3 rules: <b>attack</b>, <b>pass and move</b>, and <b>fill the spot</b>. Try to score lots of points!", "Tip off! 🏀");
+  const turns = 8;
+  for (let i = 0; i < turns; i++) {
+    setProgress(`${i + 1}/${turns}`);
+    const drive = Math.random() < 0.35 ? "open" : "blocked";
+    await possession({ drive, askDrive: true, askPass: true, askCut: i < 2, giveGo: Math.random() < 0.45, askGiveGo: true });
+  }
+  await next(`Game over! You scored <b>${points} points</b>! 🏆`, "Finish ⭐");
+}
+
+async function watch() {
+  drawSpots(); setupFive(true);
+  SPEED = 22;
+  say("Watch the <b>5-Out</b>! Look for the 3 rules: attack, pass and move, fill the spot.");
+  await sleep(3500);
+  for (;;) {
+    const r = Math.random();
+    await possession({ narrate: true, drive: r < 0.15 ? "open" : "blocked", giveGo: Math.random() < 0.25 });
+  }
+}
+
+// ---------- Screens and flow ----------
+const show = id => ["home", "game", "done", "coach"].forEach(s => $("#" + s).classList.toggle("hidden", s !== id));
+const getStars = () => JSON.parse(localStorage.getItem("fiveout-stars") || "{}");
+
+function renderHome() {
+  const stars = getStars();
+  const grid = $("#levelGrid");
+  grid.innerHTML = "";
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement("button");
+    b.className = "lvl";
+    const s = stars[i] || 0;
+    b.innerHTML = `<span class="em">${L.emoji}</span><span class="num">Level ${i + 1}</span>${L.title}<span class="st">${"⭐".repeat(s)}${"☆".repeat(3 - s)}</span>`;
+    b.onclick = () => startLevel(i);
+    grid.appendChild(b);
+  });
+  const w = document.createElement("button");
+  w.className = "lvl wide";
+  w.innerHTML = `<span class="em">👀</span>Watch the 5-Out`;
+  w.onclick = startWatch;
+  grid.appendChild(w);
+  show("home");
+}
+
+function beginRun(title) {
+  RUN++;
+  mistakes = 0; points = 0; SPEED = 32;
+  players = []; defenders = []; ball = null;
+  setScore(); setProgress("");
+  $("#lvlTitle").textContent = title;
+  $("#buttons").innerHTML = "";
+  show("game");
+  drawCourt();
+}
+
+async function startLevel(i) {
+  current = i;
+  beginRun(`${LEVELS[i].emoji} ${LEVELS[i].title}`);
+  const id = RUN;
+  try {
+    await LEVELS[i].run();
+  } catch (e) {
+    if (e === ABORT) return;
+    throw e;
+  }
+  if (id !== RUN) return;
+  finishLevel(i);
+}
+
+async function startWatch() {
+  current = null;
+  beginRun("👀 Watch the 5-Out");
+  try { await watch(); } catch (e) { if (e !== ABORT) throw e; }
+}
+
+function finishLevel(i) {
+  const s = mistakes <= 1 ? 3 : mistakes <= 4 ? 2 : 1;
+  const stars = getStars();
+  stars[i] = Math.max(stars[i] || 0, s);
+  localStorage.setItem("fiveout-stars", JSON.stringify(stars));
+  $("#doneTitle").textContent = s === 3 ? "Perfect! 🎉" : s === 2 ? "Great job! 🎉" : "You did it! 🎉";
+  $("#doneStars").textContent = "⭐".repeat(s) + "☆".repeat(3 - s);
+  $("#doneMsg").innerHTML = (points ? `You scored ${points} points. ` : "") +
+    (s === 3 ? "You really know the 5-Out!" : "Play again to get all 3 stars!");
+  $("#nextBtn").style.display = i < LEVELS.length - 1 ? "" : "none";
+  show("done");
+  speak($("#doneTitle").textContent);
+  confetti();
+}
+
+function confetti() {
+  const bits = ["🏀", "⭐", "🎉", "✨"];
+  for (let i = 0; i < 24; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.textContent = pick(bits);
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.animationDuration = 1.8 + Math.random() * 1.8 + "s";
+    c.style.animationDelay = Math.random() * .6 + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4500);
+  }
+}
+
+function stopRun() {
+  RUN++;
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  players.forEach(p => p.anim = null);
+  if (ball) ball.anim = null;
+}
+
+$("#backBtn").onclick = () => { stopRun(); renderHome(); };
+$("#homeBtn").onclick = renderHome;
+$("#againBtn").onclick = () => startLevel(current);
+$("#nextBtn").onclick = () => startLevel(current + 1);
+$("#coachBtn").onclick = () => show("coach");
+$("#coachClose").onclick = renderHome;
+function renderSound() { $("#soundBtn").textContent = soundOn ? "🔊" : "🔇"; }
+$("#soundBtn").onclick = () => {
+  soundOn = !soundOn;
+  localStorage.setItem("fiveout-sound", soundOn ? "on" : "off");
+  if (!soundOn && window.speechSynthesis) speechSynthesis.cancel();
+  renderSound();
+};
+renderSound();
+renderHome();
+</script>
+</body>
+</html>
