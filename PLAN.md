@@ -1,5 +1,7 @@
 # Next round of work (agreed with Clifton, October 22, 2026)
 
+**Status, October 22, 2026: done.** All fixes 1 to 11, the Free Throw Frenzy floor (green zone never below .18 of the bar, speed capped at 1.2 sweeps a second, so the last shots still give about 150 ms), and the basketball cards. Added during the work at Clifton's request: Swish Shot's hoop no longer jumps across the screen when it speeds up, the home path no longer hangs 100 px off the right edge in Safari, every card player is a boy (boys-only league), and the coach's mouth now follows the speech instead of running through the quiet at the end of each clip. Big Game scoring went with "+1 per first-try read" (baskets still 2), not turnovers.
+
 Source: Fable's review in `docs/review-2026-10-22.md` (item numbers below refer to it). Clifton said "go ahead" on the fixes and added the card idea.
 
 ## Clifton's calls

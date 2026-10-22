@@ -1,7 +1,7 @@
 "use strict";
 // Screens and flow: the lesson path, lesson complete, rewards, bonus games, coach notes.
 
-const SCREENS = ["home", "game", "complete", "reward", "mini", "notes"];
+const SCREENS = ["home", "game", "complete", "reward", "mini", "notes", "pack", "binder"];
 const show = id => SCREENS.forEach(s => $("#" + s).classList.toggle("hidden", s !== id));
 const UNITS = [
   { title: "Unit 1: The 5-Out", sub: "Spots, cuts and filling", lessons: [0, 1, 2] },
@@ -25,7 +25,7 @@ const unlockedGames = () => Object.keys(GAMES).filter(gameUnlocked);
 
 function stopRun() {
   RUN++;
-  voiceEl.pause();
+  hush();
   players.forEach(p => p.anim = null);
   if (ball) ball.anim = null;
   miniGame = null;
@@ -35,7 +35,7 @@ function renderSound() { document.querySelectorAll(".soundbtn").forEach(b => b.t
 function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem("fiveout-sound", soundOn ? "on" : "off");
-  if (!soundOn) voiceEl.pause();
+  if (!soundOn) hush();
   renderSound();
 }
 
@@ -44,6 +44,14 @@ function heroSay(text, speakIt = true) {
   $("#heroBubble").innerHTML = text;
   if (speakIt && audioUnlocked) speak(text);
 }
+// The first time someone taps the home screen (not a button), say the greeting:
+// before that tap the phone won't play sound.
+let greeted = false;
+document.addEventListener("click", e => {
+  if (greeted || $("#home").classList.contains("hidden") || e.target.closest("button")) return;
+  greeted = true;
+  speak($("#heroBubble").innerHTML);
+});
 function renderHome(greet = true) {
   stopRun();
   show("home");
@@ -53,19 +61,22 @@ function renderHome(greet = true) {
   $("#streakStat").innerHTML = `🔥 ${streak}`;
   $("#streakStat").classList.toggle("dim", !streak);
   $("#xpStat").innerHTML = `⭐ ${save.xp}`;
+  $("#cardsBtn").innerHTML = `🃏 ${ownedCount()}`;
+  $("#cardsBtn").classList.toggle("has-new", save.newCards.length > 0);
   const doneCount = LESSONS.filter((_, i) => save.stars[i]).length;
-  if (greet) {
-    heroSay(doneCount === 0 ? "Hi! I'm Coach Bounce! Tap the green circle to start your first lesson!"
-      : doneCount === LESSONS.length ? "You finished every lesson! Play the bonus games anytime!"
-      : "Welcome back! Let's keep learning the 5-Out!");
-  }
+  // Always refresh the greeting; only say it out loud when asked to.
+  heroSay(doneCount === 0 ? "Hi! I'm Coach Bounce! Tap the green circle to start your first lesson!"
+    : doneCount === LESSONS.length ? "You finished every lesson! Play the bonus games anytime!"
+    : "Welcome back! Let's keep learning the 5-Out!", greet);
   const current = LESSONS.findIndex((_, i) => !save.stars[i]);
   const path = $("#path");
   path.innerHTML = "";
   let z = 0;
   const row = (small) => {
     const r = html("div", "node-row" + (small ? " small" : ""), path);
-    r.style.transform = `translateX(${ZIGZAG[z++ % ZIGZAG.length]}px)`;
+    // Shift the circle, not the full-width row: a shifted row hangs off the side
+    // of the screen and lets the path wobble sideways while scrolling.
+    r.style.setProperty("--x", ZIGZAG[z++ % ZIGZAG.length] + "px");
     return r;
   };
   for (const u of UNITS) {
@@ -112,7 +123,7 @@ function openSheet(i) {
   const close = () => wrap.remove();
   wrap.onclick = e => { if (e.target === wrap) close(); };
   cancel.onclick = close;
-  start.onclick = () => { close(); startLesson(i); };
+  start.onclick = () => { close(); installFirst(() => startLesson(i)); };
 }
 
 // ---------- Lessons ----------
@@ -120,7 +131,7 @@ async function startLesson(i) {
   stopRun();
   const id = RUN;
   resetStats();
-  points = 0; SPEED = 32;
+  points = 0; SPEED = 32; zzz = true; readPoints = false;
   players = []; defenders = []; ball = null;
   show("game");
   $("#bar").classList.remove("hidden"); $("#lessonTitle").classList.add("hidden");
@@ -141,7 +152,7 @@ async function startLesson(i) {
 
 async function startWatch() {
   stopRun();
-  points = 0; SPEED = 22;
+  points = 0; SPEED = 22; zzz = true; readPoints = false;
   players = []; defenders = []; ball = null;
   show("game");
   $("#bar").classList.add("hidden"); $("#lessonTitle").classList.remove("hidden");
@@ -180,7 +191,7 @@ function lessonComplete(i) {
   doneCoach.mood("cheer");
   $("#completeTitle").textContent = stars === 3 ? "Perfect lesson!" : "Lesson complete!";
   $("#completeCards").innerHTML =
-    `<div class="card xp"><div class="k">Total XP</div><div class="v">⭐ ${xp}</div></div>` +
+    `<div class="card xp"><div class="k">XP earned</div><div class="v">⭐ ${xp}</div></div>` +
     `<div class="card acc"><div class="k">Accuracy</div><div class="v">🎯 ${Math.round(acc * 100)}%</div></div>` +
     `<div class="card st"><div class="k">Stars</div><div class="v">${"⭐".repeat(stars)}</div></div>`;
   $("#completeMsg").innerHTML = (newDay ? `🔥 <b>${save.streak} day streak!</b> ` : "") +
@@ -189,7 +200,11 @@ function lessonComplete(i) {
   sfx("fanfare");
   confetti();
   speak(stars === 3 ? "Perfect! You're a 5-Out superstar!" : stars === 2 ? "Great job! Lesson complete!" : "You did it! Lesson complete!");
-  $("#completeNext").onclick = () => reward(i, firstTime);
+  // Card packs: one per lesson (3 stars improves the odds). The very first pack
+  // has a rare or better, and finishing the Big Game the first time adds a legendary.
+  const packs = [makePack("Lesson card pack!", 2, stars === 3 ? "good" : "normal",
+    [null, save.packs === 0 ? "rare" : i === LESSONS.length - 1 && firstTime ? "legendary" : null]), streakPack(newDay)];
+  $("#completeNext").onclick = async () => { await showPacks(packs); reward(i, firstTime); };
 }
 
 // ---------- Rewards ----------
@@ -233,10 +248,12 @@ function pickReward() {
 // ---------- Bonus games ----------
 async function startMini(id) {
   stopRun();
-  show("mini");
   try {
     for (;;) {
+      show("mini");
       const res = await playMini(id);
+      const odds = ["normal", "normal", "good", "great"][res.medal];
+      await showPacks([res.medal ? makePack(`${MEDALS[res.medal]} Medal card!`, 1, odds) : null, streakPack(res.newDay)]);
       if (!res.again) break;
       RUN++;
     }
@@ -270,14 +287,31 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; $("#installBtn").classList.remove("hidden"); });
 window.addEventListener("appinstalled", () => $("#installBtn").classList.add("hidden"));
 if (!standalone && isIOS) $("#installBtn").classList.remove("hidden");
-$("#installBtn").onclick = async () => {
-  if (installPrompt) { installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $("#installBtn").classList.add("hidden"); return; }
+function installSheet(firstLesson, then) {
   const wrap = html("div", "sheet-wrap", document.body);
   const sh = html("div", "sheet", wrap);
-  html("h2", "", sh, "📲 Add to Home Screen");
-  html("p", "", sh, "1. Tap the <b>Share</b> button <b>⬆️</b> at the bottom of Safari.<br>2. Scroll down and tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b>.<br><br>Then always play from the new <b>5-Out Hoops</b> icon so your stars and streak are saved.");
-  html("button", "btn green wide", sh, "Got it").onclick = () => wrap.remove();
-  wrap.onclick = e => { if (e.target === wrap) wrap.remove(); };
+  html("h2", "", sh, firstLesson ? "📲 Before you play: add the game to your Home Screen" : "📲 Add to Home Screen");
+  html("p", "", sh, "1. Tap the <b>Share</b> button <b>⬆️</b> in Safari.<br>2. Scroll down and tap <b>Add to Home Screen</b>.<br>3. Tap <b>Add</b>, then open the new <b>5-Out Hoops</b> icon.<br><br>" +
+    "<b>Your stars, XP, streak and cards live in the icon, not in Safari.</b> Anything earned here in Safari won't show up in the icon, and Safari may erase it after a week.");
+  const close = () => wrap.remove();
+  if (then) {
+    const r = html("div", "row", sh);
+    html("button", "btn ghost", r, "Play in Safari").onclick = () => { close(); sessionStorage.setItem("fiveout-safari-ok", "1"); then(); };
+    html("button", "btn green", r, "Got it").onclick = close;
+  } else {
+    html("button", "btn green wide", sh, "Got it").onclick = close;
+  }
+  wrap.onclick = e => { if (e.target === wrap) close(); };
+}
+// On iPhone Safari (not the home screen app), show how to install before a lesson,
+// so a player doesn't earn stars in Safari and then lose them. Once per visit.
+function installFirst(then) {
+  if (standalone || !isIOS || sessionStorage.getItem("fiveout-safari-ok")) { then(); return; }
+  installSheet(true, then);
+}
+$("#installBtn").onclick = async () => {
+  if (installPrompt) { installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $("#installBtn").classList.add("hidden"); return; }
+  installSheet(false);
 };
 
 // ---------- Start up ----------
@@ -287,6 +321,9 @@ $("#installBtn").onclick = async () => {
   doneCoach = createCoach(); $("#doneCoach").appendChild(doneCoach.el);
   rewardCoach = createCoach(); $("#rewardCoach").appendChild(rewardCoach.el);
   miniCoach = createCoach();
+  packCoach = createCoach(); $("#packCoach").appendChild(packCoach.el);
+  $("#cardsBtn").onclick = openBinder;
+  $("#binderClose").onclick = () => renderHome(false);
   $("#quitBtn").onclick = quitLesson;
   $("#miniQuit").onclick = () => renderHome(false);
   $("#watchBtn").onclick = startWatch;

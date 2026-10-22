@@ -26,15 +26,15 @@ const grab = name => core.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n}\\n
 const { cleanSpeech, voiceKey } = new Function(`${grab("cleanSpeech")}${grab("voiceKey")}return { cleanSpeech, voiceKey };`)();
 
 // Spoken text lives in these files.
-const code = ["js/lessons.js", "js/minigames.js", "js/app.js"].map(read).join("\n");
+const code = ["js/lessons.js", "js/minigames.js", "js/app.js", "js/cards.js"].map(read).join("\n");
 
 // Values that can fill each ${...} in a spoken template.
 const ids = ["1", "2", "3", "4", "5"];
 function valuesFor(expr) {
   if (/\.id$/.test(expr)) return ids;
   if (/^spotWord\(/.test(expr)) return ["top", "wing", "corner"];
-  // Level 6 has 8 turns worth 2 points each, so 30 leaves room to spare.
-  if (expr === "points") return Array.from({ length: 16 }, (_, i) => String(i * 2));
+  // The Big Game: 6 turns, at most 4 reads (1 point each) and a basket (2) per turn.
+  if (expr === "points") return Array.from({ length: 41 }, (_, i) => String(i));
   return null;
 }
 
@@ -51,6 +51,7 @@ for (const m of code.matchAll(literal)) {
   }
   if (!usable) continue; // a template that is not speech (CSS, transforms and so on)
   if (/^#[0-9a-f]{3,8}$/i.test(variants[0]) || /^M-?[\d.]/.test(variants[0])) continue; // colors and SVG paths
+  if (/^[\d.,\s-]+$/.test(variants[0])) continue; // numbers only, like SVG points
   for (const v of variants) {
     const t = cleanSpeech(v.replace(/\\'/g, "'"));
     // Speech starts like a sentence; class names and other code strings start lowercase.
@@ -92,8 +93,41 @@ let removed = 0;
 for (const f of fs.readdirSync(outDir)) {
   if (f.endsWith(".m4a") && !keys.has(f.slice(0, -4))) { fs.unlinkSync(path.join(outDir, f)); removed++; }
 }
+// When each clip actually has speech, so the coach's mouth moves only while he
+// is talking (not through the quiet at the start, the end and between sentences).
+// Each clip gets [[start, end], ...] in seconds.
+function speechTimes(file) {
+  const wav = path.join(os.tmpdir(), "five-out-timing.wav");
+  execFileSync("afconvert", ["-f", "WAVE", "-d", "LEI16@8000", "-c", "1", file, wav]);
+  const buf = fs.readFileSync(wav);
+  fs.unlinkSync(wav);
+  const at = buf.indexOf("data");
+  const pcm = new Int16Array(buf.buffer.slice(buf.byteOffset + at + 8, buf.byteOffset + at + 8 + buf.readUInt32LE(at + 4)));
+  const win = 160; // 20 ms windows
+  const level = [];
+  for (let i = 0; i + win <= pcm.length; i += win) {
+    let m = 0;
+    for (let j = i; j < i + win; j++) m = Math.max(m, Math.abs(pcm[j]));
+    level.push(m);
+  }
+  const loud = Math.max(...level) * 0.06;
+  const segs = [];
+  level.forEach((v, i) => {
+    if (v <= loud) return;
+    const t = i * 0.02, last = segs[segs.length - 1];
+    if (last && t - last[1] < 0.16) last[1] = t + 0.02; // a short gap is part of the same phrase
+    else segs.push([t, t + 0.02]);
+  });
+  return segs.map(([a, b]) => [+a.toFixed(2), +b.toFixed(2)]);
+}
+const times = {};
+for (const k of [...keys].sort()) times[k] = speechTimes(path.join(outDir, k + ".m4a"));
 fs.writeFileSync(path.join(outDir, "manifest.js"),
-  "// Built by tools/make-voice.mjs. Lists the voice clips that exist.\n" +
-  `window.VOICE = new Set(${JSON.stringify([...keys].sort())});\n`);
+  "// Built by tools/make-voice.mjs. Lists the voice clips that exist, and when\n" +
+  "// each one has speech ([start, end] seconds), for the coach's mouth.\n" +
+  `window.VOICE = new Set(${JSON.stringify([...keys].sort())});\n` +
+  `window.VOICE_TIMES = ${JSON.stringify(times)};\n`);
 fs.writeFileSync(path.join(outDir, "lines.txt"), [...lines].sort().join("\n") + "\n");
 console.log(`${lines.size} lines: ${made} recorded, ${removed} removed`);
+// The voice manifest changed, so the service worker needs a new build stamp.
+execFileSync("node", [path.join(root, "tools/stamp.mjs")], { stdio: "inherit" });

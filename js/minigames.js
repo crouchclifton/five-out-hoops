@@ -14,7 +14,7 @@ const GAMES = {
   },
   passpop: {
     title: "Pass Pop", emoji: "🤝", icon: "👉",
-    intro: "Pass Pop! <b>Tap the teammate who is open.</b> Don't pass to a covered teammate!",
+    intro: "Pass Pop! <b>Tap the open teammate next to the ball.</b> Don't pass to a covered teammate!",
     tiers: [8, 14, 20], unit: "passes", make: () => new PassPop(),
   },
   freethrow: {
@@ -123,7 +123,7 @@ class Floaters {
 
 // ---------- Swish Shot: flick the ball at a moving hoop ----------
 class SwishShot {
-  constructor() { this.score = 0; this.time = 30; this.streak = 0; this.fx = new Floaters(); this.clock = 0; }
+  constructor() { this.score = 0; this.time = 30; this.streak = 0; this.fx = new Floaters(); this.clock = 0; this.phase = 0; }
   resize(W, H) {
     this.W = W; this.H = H;
     this.r = Math.min(W, H) * .085;
@@ -134,10 +134,10 @@ class SwishShot {
   }
   newBall() { this.ball = { x: this.home.x, y: this.home.y, r: this.r, state: "ready", spin: 0 }; }
   start() { this.running = true; }
-  get hoopX() {
-    const speed = 0.8 + Math.min(this.score, 30) * 0.035;
-    return this.W / 2 + Math.sin(this.clock * speed) * this.W * .28;
-  }
+  // The hoop swings faster as the score goes up. The swing angle is added up a
+  // frame at a time, so a speed change never makes the hoop jump across the screen
+  // (sin(clock * speed) did: a new speed moved the whole swing at once).
+  get hoopX() { return this.W / 2 + Math.sin(this.phase) * this.W * .28; }
   hud() { return [`🏀 ${this.score}`, `⏱️ ${Math.ceil(this.time)}`]; }
   down(x, y) {
     if (this.ball.state === "ready" && Math.hypot(x - this.ball.x, y - this.ball.y) < this.r * 2.6)
@@ -156,6 +156,7 @@ class SwishShot {
   }
   update(dt) {
     this.clock += dt;
+    this.phase += dt * (0.8 + Math.min(this.score, 30) * 0.035);
     this.fx.update(dt);
     if (this.running) {
       this.time -= dt;
@@ -229,7 +230,8 @@ class FreeThrow {
   }
   start() { this.running = true; }
   hud() { return [`🏀 ${this.score}`, `Shot ${Math.min(this.taken + 1, this.shots)}/${this.shots}`]; }
-  get speed() { return 0.85 + this.makes * 0.13; }
+  // Gets faster with each make, but never past 1.2 sweeps a second.
+  get speed() { return Math.min(1.2, 0.85 + this.makes * 0.13); }
   down() {
     if (!this.running || this.ball.state !== "ready") return;
     const d = Math.abs(this.p - this.zoneC);
@@ -259,7 +261,9 @@ class FreeThrow {
           b.state = "drop"; b.vy = 40;
           sfx("swish"); this.netSwing = 14;
           this.fx.add(f.result === "perfect" ? "PERFECT! +3" : "+2", this.hoopX, this.hoopY - 46);
-          this.zoneW = Math.max(.09, this.zoneW * .86);
+          // The green zone shrinks, but never below .18 of the bar: at top speed that is
+          // still about 150 ms to tap, so a late shot takes timing, not luck.
+          this.zoneW = Math.max(.18, this.zoneW * .86);
         } else {
           b.state = "bounce"; b.vx = (Math.random() < .5 ? -1 : 1) * 200; b.vy = f.result === "short" ? -200 : -120;
           sfx("clank");
@@ -324,9 +328,10 @@ class PassPop {
   start() { this.running = true; }
   hud() { return [`🤝 ${this.score}`, `⏱️ ${Math.ceil(this.time)}`]; }
   get window() { return Math.max(.85, 1.7 - this.score * .05); }
+  // Only a teammate next to the ball gets open: skip passes are steals in the lessons.
   pickOpen() {
-    const others = this.players.filter(p => p !== this.holder);
-    this.open = { p: pick(others), t: 0, dur: this.window };
+    const next = PASSES[this.holder.spot].map(s => this.players.find(p => p.spot === s));
+    this.open = { p: pick(next), t: 0, dur: this.window };
   }
   down(x, y) {
     if (!this.running || this.passing) return;
@@ -596,6 +601,7 @@ async function playMini(id) {
   save.medals[id] = Math.max(save.medals[id] || 0, medal);
   const xp = MEDAL_XP[medal];
   addXP(xp);
+  const newDay = touchStreak(); // bonus games keep the streak alive too
   const res = html("div", "panel");
   res.appendChild(miniCoach.el);
   miniCoach.mood(medal >= 2 ? "cheer" : medal === 1 ? "happy" : "idle");
@@ -613,5 +619,5 @@ async function playMini(id) {
   const choice = await Promise.race([waitForButton(again).then(() => "again"), waitForButton(cont).then(() => "continue")]);
   cancelAnimationFrame(raf);
   if (myRun !== RUN) throw ABORT;
-  return { medal, score, xp, again: choice === "again" };
+  return { medal, score, xp, newDay, again: choice === "again" };
 }
