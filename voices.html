@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pick a voice</title><link rel="icon" href="data:,">
+<style>
+ body{font-family:ui-rounded,system-ui,sans-serif;background:#1d3557;color:#0f172a;margin:0;padding:16px}
+ h1{color:#fff;margin:4px 0 4px} p.sub{color:#cbd5e1;margin:0 0 14px}
+ .card{background:#fff;border-radius:16px;padding:12px 14px;margin-bottom:12px}
+ .card h2{margin:0 0 2px;font-size:1.25rem} .card .d{color:#475569;margin:0 0 8px}
+ .row{display:flex;gap:8px;flex-wrap:wrap}
+ button{flex:1 1 30%;min-height:48px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:1rem;font-weight:700}
+ button.on{background:#16a34a}
+</style></head><body>
+<h1>Pick a voice</h1>
+<p class="sub">Tap the buttons to hear each voice. Then tell Claude which letter you like best, and which "uh oh" sounds right.</p>
+<div id="list"></div>
+<script>
+// Temporary page for choosing the game's voice. Delete it and samples/ once one is picked.
+const LINES = ["Uh oh!", "Nice pass!", "Give and go!"];
+const VOICES = [
+  ["A", "Eric", "am_eric", "The highest of the natural voices."],
+  ["B", "Puck", "am_puck", "Young and playful."],
+  ["C", "Puck, raised", "am_puck_up", "Puck, nudged a bit higher."],
+  ["D", "Liam", "am_liam", "Warm and easygoing."],
+  ["E", "Adam", "am_adam", "Relaxed and casual."],
+  ["F", "Michael, raised", "am_michael_up", "The voice you have now, nudged a bit higher."],
+];
+const UH = ["Uh oh!", "Uh-oh!", "Uh... oh!", "Uhh, ohh!"];
+const audio = new Audio();
+let lastBtn;
+function btn(label, src) {
+  const b = document.createElement("button");
+  b.textContent = "▶ " + label;
+  b.onclick = () => {
+    audio.src = src; audio.play();
+    if (lastBtn) lastBtn.classList.remove("on");
+    b.classList.add("on"); lastBtn = b;
+  };
+  return b;
+}
+function card(title, desc, buttons) {
+  const c = document.createElement("div"); c.className = "card";
+  c.innerHTML = `<h2>${title}</h2><p class="d">${desc}</p>`;
+  const r = document.createElement("div"); r.className = "row";
+  buttons.forEach(b => r.appendChild(b));
+  c.appendChild(r);
+  document.getElementById("list").appendChild(c);
+}
+for (const [letter, name, file, desc] of VOICES)
+  card(`${letter}. ${name}`, desc, LINES.map((l, i) => btn(l, `samples/${file}-${i}.m4a`)));
+card(`Which "uh oh" sounds right?`, "Four ways of writing it, all in voice B. The one you pick will carry over to whichever voice you choose.",
+  UH.map((t, i) => btn(`${i + 1}. ${t}`, `samples/uh-${i}.m4a`)));
+</script></body></html>
