@@ -18,16 +18,15 @@ const NARRATE = process.env.NARRATE || path.join(os.homedir(), "work/claude-tool
 const PYTHON = process.env.KOKORO_PYTHON || path.join(os.homedir(), ".local/share/cru-narration/kokoro-venv/bin/python");
 
 const root = path.join(path.dirname(new URL(import.meta.url).pathname), "..");
-const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const read = f => fs.readFileSync(path.join(root, f), "utf8");
 
 // Use the game's own cleanSpeech() and voiceKey(), so the file names always match.
-const grab = name => html.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n}\\n`))[0];
+const core = read("js/core.js");
+const grab = name => core.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n}\\n`))[0];
 const { cleanSpeech, voiceKey } = new Function(`${grab("cleanSpeech")}${grab("voiceKey")}return { cleanSpeech, voiceKey };`)();
 
-// Spoken text lives between "Basketball actions" and the end of finishLevel().
-const start = html.indexOf("// ---------- Basketball actions");
-const end = html.indexOf("function confetti");
-const code = html.slice(start, end);
+// Spoken text lives in these files.
+const code = ["js/lessons.js", "js/minigames.js", "js/app.js"].map(read).join("\n");
 
 // Values that can fill each ${...} in a spoken template.
 const ids = ["1", "2", "3", "4", "5"];
@@ -53,7 +52,8 @@ for (const m of code.matchAll(literal)) {
   if (!usable) continue; // a template that is not speech (CSS, transforms and so on)
   for (const v of variants) {
     const t = cleanSpeech(v.replace(/\\'/g, "'"));
-    if (/[a-z]/i.test(t) && (t.includes(" ") || /[!.?]$/.test(t))) lines.add(t);
+    // Speech starts like a sentence; class names and other code strings start lowercase.
+    if (/^([A-Z0-9]|number )/.test(t) && (t.includes(" ") || /[!.?]$/.test(t))) lines.add(t);
   }
 }
 

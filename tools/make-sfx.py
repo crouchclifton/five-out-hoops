@@ -1,4 +1,4 @@
-"""Builds the four sound effects in sfx/ as small WAV files. Run: python3 tools/make-sfx.py"""
+"""Builds the sound effects in sfx/ as small WAV files. Run: python3 tools/make-sfx.py"""
 import math, os, struct, wave
 
 RATE = 22050
@@ -32,4 +32,14 @@ os.makedirs(OUT, exist_ok=True)
 write("good", notes([(0, 660, .12, "sine", .5), (.1, 880, .2, "sine", .5)]))
 write("bad", notes([(0, 200, .28, "square", .18)]))
 write("pass", notes([(0, 420, .1, "triangle", .5)]))
+write("tick", notes([(0, 880, .09, "square", .12)]))
+write("go", notes([(0, 523, .14, "square", .14), (0, 784, .3, "square", .1), (0, 1047, .32, "sine", .3)]))
+write("whistle", notes([(0, 2100, .5, "sine", .35), (0, 2160, .5, "sine", .25)]))
+write("combo", notes([(i * .06, f, .14, "triangle", .45) for i, f in enumerate([659, 784, 988, 1319])]))
+write("fanfare", notes([(0, 523, .16, "triangle", .45), (.16, 659, .16, "triangle", .45), (.32, 784, .16, "triangle", .45), (.48, 1047, .5, "triangle", .5), (.48, 784, .5, "sine", .25)]))
+write("coin", notes([(0, 988, .08, "square", .12), (.07, 1319, .25, "square", .12)]))
+write("clank", notes([(0, 180, .22, "square", .16), (0, 263, .18, "triangle", .3), (.02, 517, .12, "sine", .2)]))
+write("steal", notes([(0, 330, .12, "square", .15), (.1, 220, .25, "square", .15)]))
+write("pop", notes([(0, 600, .06, "sine", .5), (.03, 900, .08, "sine", .35)]))
+write("bounce", notes([(0, 110, .09, "sine", .8), (0, 220, .05, "triangle", .3)]))
 write("swish", notes([(0, 523, .12, "sine", .45), (.08, 659, .12, "sine", .45), (.16, 784, .12, "sine", .45), (.24, 1047, .3, "sine", .45)]))

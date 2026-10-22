@@ -1,0 +1,16 @@
+{
+  "name": "5-Out Hoops",
+  "short_name": "5-Out Hoops",
+  "description": "Learn the 5-Out basketball offense with Coach Bounce.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e0f2fe",
+  "theme_color": "#1d3557",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

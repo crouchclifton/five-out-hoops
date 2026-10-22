@@ -1,16 +1,34 @@
 1 top, 2 wings, 2 corners. That's the 5-Out!
+3, 2, 1, GO!
 ATTACK!
+After you pass, don't stand still. Cut to the hoop!
 Attack!
+Awesome!
 Awesome! Everyone moves over one spot to fill the hole.
 Big Game
 Big Game! Use all 3 rules: attack, pass and move, and fill the spot. Try to score lots of points!
+Bonus game!
+Boom!
+Bronze medal! Nice work!
+Clank!
 Corners are way down low, on the sides by the end line.
 Cut to the hoop!
+Defender wins!
+Dribble Dash
+Dribble Dash! Tap left, right, left, right as fast as you can to beat the defender to the hoop!
 Drive!
+Erase all stars, XP, streak and medals on this phone?
 Everyone fills the open spot next to them!
+FINISH!
 Fill the Spot
 Find the Spots
-GREAT!
+Finish every lesson to win the trophy!
+Finish the lesson above to unlock this bonus game!
+Finish the lesson before this one to unlock it!
+Flick UP!
+Free Throw Frenzy
+Free Throw Frenzy! Tap when the line is in the green zone to shoot. Ten shots!
+GO!
 Game over! You scored 0 points!
 Game over! You scored 10 points!
 Game over! You scored 12 points!
@@ -29,28 +47,56 @@ Game over! You scored 6 points!
 Game over! You scored 8 points!
 Give & Go
 Give and go!
+Give and go, attack, big game
+Gold medal! You're a superstar!
 Good eyes! Not open, so we keep moving.
-Great job!
+Good try! Play again to win a medal!
+Great job! Lesson complete!
+Great read!
+Hi! I'm Coach Bounce! Tap the green circle to start your first lesson!
+If you quit now, you'll lose your progress in this lesson.
+If your defender is not in the way, drive to the hoop!
+If your defender is sleeping, attack the basket!
 In 5-Out, there are 5 spots, all outside the big curved line. Let's find them!
+Keep going
+Learn the 5 spots: the top, 2 wings and 2 corners.
+Lesson complete!
 Let's go!
+Look for the open cutter. Give and go!
 Look! Your defender is sleeping and NOT in the way. Rule number 1: attack the basket!
 Look! number 1's defender is sleeping way back. number 1 is OPEN. Pass it back!
 Look! number 2's defender is sleeping way back. number 2 is OPEN. Pass it back!
 Look! number 3's defender is sleeping way back. number 3 is OPEN. Pass it back!
 Look! number 4's defender is sleeping way back. number 4 is OPEN. Pass it back!
 Look! number 5's defender is sleeping way back. number 5 is OPEN. Pass it back!
+M-1.6 -.6 L-.4 -.1 M1.6 -.6 L.4 -.1 M-1 1.3 Q0 .6 1 1.3
+M-1.9 0 H1.9 M0 -1.9 V1.9
+M10 96 L10 80 A41 41 0 0 1 90 80 L90 96
+M38 .5 A12 12 0 0 0 62 .5
+Made it!
+New best!
+New bonus game!
+Next to
 Nice pass! Now what should number 1 do?
 Nice pass! Now what should number 2 do?
 Nice pass! Now what should number 3 do?
 Nice pass! Now what should number 4 do?
 Nice pass! Now what should number 5 do?
+Nice!
 Not open
+ON FIRE x3
+ON FIRE!
+OPEN!
 One spot is still empty. Where does number 1 go? Tap the empty spot.
 One spot is still empty. Where does number 2 go? Tap the empty spot.
 One spot is still empty. Where does number 3 go? Tap the empty spot.
 One spot is still empty. Where does number 4 go? Tap the empty spot.
 One spot is still empty. Where does number 5 go? Tap the empty spot.
+Open!
+PERFECT! +3
 Pass & Cut
+Pass Pop
+Pass Pop! Tap the teammate who is open. Don't pass to a covered teammate!
 Pass and cut! number 1 cuts to the hoop.
 Pass and cut! number 2 cuts to the hoop.
 Pass and cut! number 3 cuts to the hoop.
@@ -67,20 +113,39 @@ Pass to number 2
 Pass to number 3
 Pass to number 4
 Pass to number 5
+Pass, cut, and look. Is the cutter open?
+Perfect lesson!
 Perfect!
+Perfect! You're a 5-Out superstar!
+Pick a bonus game!
+Pick any bonus game!
 Pick the teammate right next to the empty spot.
-Play again to get all 3 stars!
+Play again
+Play again for 3 stars!
+Play!
+Remember: pass and move! Never stand still.
 Rule number 1: Attack the basket when you can!
 Rule number 1: Attack the basket! If your defender is NOT between you and the hoop, drive and score!
 Rule number 2: Pass and MOVE! After you pass, don't stand still. Cut to the hoop!
 Rule number 2: Pass and MOVE! Never stand still after you pass. Cut to the hoop!
 Rule number 3: Fill the open spot! When a teammate cuts, their spot is empty. The teammate next to it slides over.
+SLAM DUNK!
 SPREAD OUT!
+STEAL! -1
+SWISH!
 SWISH! +2
+Silver medal! Great job!
 Smart! The defender is in the way, so we pass.
+So close!
 Someone is already there! Find the empty spot.
 Someone is already there! Pick an empty spot.
+Spots, cuts and filling
+Spread out! Stay outside the big line.
 Stand still
+Sweet!
+Swish Shot
+Swish Shot! Flick the ball up at the hoop. Make as many baskets as you can!
+TAP in the green!
 Tap a CORNER spot.
 Tap a WING spot.
 Tap an empty spot for number 1.
@@ -98,38 +163,37 @@ The defender is right with number 2. Not open! Hold the ball.
 The defender is right with number 3. Not open! Hold the ball.
 The defender is right with number 4. Not open! Hold the ball.
 The defender is right with number 5. Not open! Hold the ball.
+The defender won this time. Try again!
 The top is in the middle, out front, far from the hoop.
 The top spot is empty! Who fills it? Tap a player.
 The wing spot is empty! Who fills it? Tap a player.
 Tip off!
 Too far! A defender could steal that. Pass to the teammate right next to you.
+Too long!
+Too short!
+Too slow!
 Uh oh! Everyone is bunched up by the hoop. That makes it easy for the defense. Let's spread out!
-Watch the 5-Out
+Unit 1: The 5-Out
+Unit 2: Read the Defense
+Use all 3 rules and score as many points as you can!
+Wait, don't go!
 Watch the 5-Out! Look for the 3 rules: attack, pass and move, fill the spot.
+Welcome back! Let's keep learning the 5-Out!
+When a spot opens up, fill it!
+When a spot opens up, the teammate next to it slides over.
 Wings are on the sides, like a bird's wings!
+Yes!
 You can spot an open cutter!
-You did it!
+You did it! Lesson complete!
 You did it! Pass, then cut!
+You earned a bonus game!
+You finished every lesson! Play the bonus games anytime!
+You got it!
 You know when to attack!
-You really know the 5-Out!
-You scored 0 points.
-You scored 10 points.
-You scored 12 points.
-You scored 14 points.
-You scored 16 points.
-You scored 18 points.
-You scored 2 points.
-You scored 20 points.
-You scored 22 points.
-You scored 24 points.
-You scored 26 points.
-You scored 28 points.
-You scored 30 points.
-You scored 4 points.
-You scored 6 points.
-You scored 8 points.
+You unlocked a new bonus game!
+You're a 5-Out champion! Pick any bonus game!
 Your defender is standing between you and the hoop. Pass it to a teammate!
-lvl wide
+number 0891b2
 number 1 beat the defender! Pass it back!
 number 1 comes right back to the corner.
 number 1 is covered. No pass this time.
@@ -140,6 +204,11 @@ number 1 passes to the wing.
 number 1's defender is in the way. Look to pass.
 number 1's defender is not in the way. Attack the basket!
 number 1, you have the ball! Is your defender in the way? Drive or pass?
+number 16a34a
+number 172554
+number 1d3557
+number 1e40af
+number 1f2937
 number 2 beat the defender! Pass it back!
 number 2 comes right back to the corner.
 number 2 is covered. No pass this time.
@@ -150,6 +219,7 @@ number 2 passes to the wing.
 number 2's defender is in the way. Look to pass.
 number 2's defender is not in the way. Attack the basket!
 number 2, you have the ball! Is your defender in the way? Drive or pass?
+number 2563eb
 number 3 beat the defender! Pass it back!
 number 3 comes right back to the corner.
 number 3 is covered. No pass this time.
@@ -180,3 +250,9 @@ number 5 passes to the wing.
 number 5's defender is in the way. Look to pass.
 number 5's defender is not in the way. Attack the basket!
 number 5, you have the ball! Is your defender in the way? Drive or pass?
+number 58cc02
+number 60a5fa
+number 7c2d12
+number 7f1d1d
+number 9333ea
+number 94a3b8

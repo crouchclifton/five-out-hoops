@@ -1,11 +1,26 @@
 # 5-Out Hoops
 
-A phone-friendly web game that teaches the basics of the 5-Out motion offense to 7 to 9 year old players.
+A phone game that teaches the 5-Out motion offense to 7 to 9 year old players, with Coach Bounce, a Duolingo-style lesson path, and Mario Party-style bonus games.
 
-Play it: https://crouchclifton.github.io/five-out-hoops/
+Play it: https://crouchclifton.github.io/five-out-hoops/ (add it to the home screen so progress stays saved)
 
 Based on Coach Russ's video "5-Out Motion Offense: A Complete Guide for Coaches" (https://youtu.be/PiR6-4Erhjw).
-The game is `index.html`, with no outside libraries. Sound comes from files, not the phone's built-in speech, because iPhone Safari's speech was silent and knocked out other sounds:
 
-- `voice/` holds a recorded clip for every line the game says, in Kokoro's `am_michael` voice (open source, made on a Mac, nothing sent to an outside service). After changing any game text, run `node tools/make-voice.mjs` to record new clips and delete old ones. It needs the Kokoro setup from Clifton's `claude-toolkit/narration` folder.
+## Files
+
+- `index.html`, `css/style.css`: the screens.
+- `js/core.js`: helpers, sound and voice, save data (stars, XP, streak, medals in localStorage).
+- `js/coach.js`: Coach Bounce, the animated mascot.
+- `js/lessons.js`: the court, the 5-Out rotation and the six lessons.
+- `js/minigames.js`: the four bonus games (Swish Shot, Pass Pop, Free Throw Frenzy, Dribble Dash).
+- `js/app.js`: the lesson path, rewards, coach notes, and the home screen app setup.
+- `sw.js`, `manifest.webmanifest`, `icons/`: home screen app (PWA) and offline play.
+
+## Sound
+
+Sound comes from files, not the phone's built-in speech, because iPhone Safari's speech was silent and knocked out other sounds.
+
+- `voice/` holds a recorded clip for every line the game says, made with the open-source Kokoro voice on a Mac (nothing sent to an outside service). After changing any game text, run `node tools/make-voice.mjs` to record new clips and delete old ones. It needs the Kokoro setup from Clifton's `claude-toolkit/narration` folder.
 - `sfx/` holds the sound effects, built by `python3 tools/make-sfx.py`.
+
+`voices.html` and `samples/` are a temporary page for choosing the voice.
