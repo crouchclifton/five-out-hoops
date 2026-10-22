@@ -1,3 +1,33 @@
+# Round 4 (proposed October 22, 2026): Hoop Wall bonus game. Paused, waiting on Clifton
+
+Based on two screenshots Clifton sent from a Mario Party mini game (the YouTube video itself was not watched, to save tokens). Nothing is built yet.
+
+**What the screenshots show:** a brick wall with three rows of hoops. Bottom row: 4 orange rims (+1). Middle row: 5 gold rims (+2) that slide sideways (the end hoops are cut off by the edges). Top row: 4 orange rims. Four players stand on the court, each with their own ball color, scores across the top, and a timer (about 20 seconds left in both shots).
+
+**How it would play on the phone (one finger):**
+1. Press and hold anywhere. Your player follows your finger left and right so you can line up under a hoop.
+2. While you hold, a power meter beside your player fills up, then drains, then fills again (back and forth).
+3. The meter has three colored bands, one per row. Let go in a band and the ball goes up to that row. Let go between bands and it clanks off the wall.
+4. If you are lined up under a hoop in that row, it goes in: bottom +1, gold middle +2, top +3. The gold row moves, so it is harder.
+5. 30 seconds, then a 1st to 4th place standings screen, then the usual medal screen.
+
+**CPU players:** three made-up boys in their own jersey colors (no names stored, no real players). Each picks a hoop, walks under it, holds, and lets go with a small timing mistake. One is easy, one medium, one good, so a 7 to 9 year old can win with practice but not every time. Medals stay based on your points (like the other games), and your place is shown too.
+
+**Where it goes:** it becomes Lesson 5's bonus game (Lesson 5 "Attack!" has none today). Lesson 6 and the trophy keep "pick any bonus game", so it shows up there too.
+
+**Work list:**
+- `js/minigames.js`: new `HoopWall` class and a `GAMES.hoopwall` entry (title, intro, medal tiers). Reuses `drawHoop`, `drawBall`, `drawText`, `Floaters`.
+- `js/lessons.js`: Lesson 5 `game: "hoopwall"`.
+- `js/icons.js`: a drawn icon for the path node (a wall of three hoops).
+- Voice: run `node tools/make-voice.mjs` for the new intro and any spoken lines.
+- Run `node tools/stamp.mjs`, play-test in the browser, then the iPhone simulator.
+- Tune the medal tiers from play-testing (first guess: bronze 8, silver 16, gold 24 points).
+
+**Questions for Clifton before building:**
+- Is the top row worth +3? The screenshots only show +1 (bottom) and +2 (gold middle). The top value is a guess.
+- Name: "Hoop Wall" OK, or something else?
+- Should the CPU players ever block or knock your ball (more chaos, more Mario Party), or just race for points (simpler for little kids)? Plan assumes just racing.
+
 # Round 3 (October 22, 2026): done
 
 Clifton asked for all the Duolingo ideas except recording his own voice (maybe later), plus player profiles. Built: hand-drawn SVG icons instead of emoji (js/icons.js); the Eagles identity (navy and orange, EAGLES on the gym floor, an original cartoon eagle mascot, never the league's logo; a credit line on the coaches page saying it is not an official league app); Unit 1 on an orange outdoor court and Unit 2 in the navy Eagles Gym; characters beside the path that move and cheer (js/cast.js); gym bags on the path; rewards one screen at a time (stars, XP, card pack, streak); streak milestones at 3, 7, 14, 30, 60 and 100 days with Coach Bounce on fire; Rest Day Passes (start with 1, earn one at each milestone from 7 on, hold 2); three daily Skills Challenges that pay a card pack (js/rewards.js); players as a face, jersey and number with no names, saved only on the phone, with per-player start over (js/profiles.js). Still Clifton's to do: playtest with a few players, and keep checking new features against Coach Russ's video.
