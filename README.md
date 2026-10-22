@@ -7,5 +7,5 @@ Play it: https://crouchclifton.github.io/five-out-hoops/
 Based on Coach Russ's video "5-Out Motion Offense: A Complete Guide for Coaches" (https://youtu.be/PiR6-4Erhjw).
 The game is `index.html`, with no outside libraries. Sound comes from files, not the phone's built-in speech, because iPhone Safari's speech was silent and knocked out other sounds:
 
-- `voice/` holds a recorded clip for every line the game says. After changing any game text, run `node tools/make-voice.mjs` on a Mac to record new clips and delete old ones.
+- `voice/` holds a recorded clip for every line the game says, in Kokoro's `am_michael` voice (open source, made on a Mac, nothing sent to an outside service). After changing any game text, run `node tools/make-voice.mjs` to record new clips and delete old ones. It needs the Kokoro setup from Clifton's `claude-toolkit/narration` folder.
 - `sfx/` holds the sound effects, built by `python3 tools/make-sfx.py`.
