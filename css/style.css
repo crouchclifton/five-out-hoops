@@ -335,7 +335,35 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
 .foil-ball .ic { width: 70px; height: 70px; }
 .foil-text { font-weight: 900; font-size: 1.3rem; line-height: 1.1; }
 .foil small { font-size: .85rem; }
-.foil.rip { animation: rip .45s ease-in forwards; }
+/* Swipe to rip: --rip is how far the finger has gone (0 to 1), --dir which way. */
+.foil { touch-action: none; cursor: grab; --rip: 0; --dir: 1; overflow: visible; }
+.foil-top { z-index: 2; height: 30px; transform-origin: calc(50% + var(--dir) * 50%) 100%;
+  transform: translateY(calc(var(--rip) * -10px)) rotate(calc(var(--dir) * var(--rip) * -9deg)); border-radius: 16px 16px 0 0; }
+.foil.springback .foil-top { transition: transform .25s cubic-bezier(.3,1.6,.5,1); }
+.tear { position: absolute; bottom: -3px; height: 6px; width: calc(var(--rip) * 100%);
+  left: calc((1 - var(--dir)) / 2 * (1 - var(--rip)) * 100%);
+  background: repeating-linear-gradient(135deg, #fff 0 3px, transparent 3px 6px); }
+.foil.dragging, .foil.rip, .foil.unzip { animation: none; }
+.foil.wiggle { animation: shake .35s; }
+.foil.rip .foil-top { transition: transform .45s ease-in, opacity .45s; opacity: 0;
+  transform: translate(calc(var(--dir) * 160px), -110px) rotate(calc(var(--dir) * 35deg)); }
+.foil.rip > :not(.foil-top) { animation: packDrop .5s ease-in .2s forwards; }
+.foil.rip { background: none; box-shadow: none; }
+.foil.rip::before { content: ""; position: absolute; inset: 0; border-radius: 16px; background: linear-gradient(135deg, #fde047, #f59e0b 40%, #fff7ae 55%, #d97706);
+  box-shadow: 0 8px 0 #b45309; animation: packDrop .5s ease-in .2s forwards; }
+@keyframes packDrop { to { transform: translateY(70px) scale(.85); opacity: 0; } }
+/* the finger dot that shows how to swipe */
+.swipe-hint { position: absolute; top: 4px; left: 12%; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.9);
+  box-shadow: 0 0 0 6px rgba(255,255,255,.35), 0 3px 8px rgba(0,0,0,.3); z-index: 3; pointer-events: none; animation: swipeHint 1.8s ease-in-out infinite; }
+@keyframes swipeHint { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: 1; } 70% { transform: translateX(110px); opacity: 1; } 85%, 100% { transform: translateX(110px); opacity: 0; } }
+.foil.dragging .swipe-hint, .foil.rip .swipe-hint, .foil.unzip .swipe-hint { display: none; }
+/* the gym bag's zipper */
+.zip-track { position: absolute; left: 34px; right: 34px; top: 58px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.35); }
+.zip-pull { position: absolute; top: -7px; left: calc(var(--rip) * 100% - 8px); width: 16px; height: 20px; border-radius: 4px;
+  background: #ffc800; border: 2px solid #1e293b; }
+.foil.bagpack .swipe-hint { top: 48px; left: 22%; }
+@keyframes swipeHintBag { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: 1; } 70% { transform: translateX(90px); opacity: 1; } 85%, 100% { opacity: 0; } }
+.foil.bagpack .swipe-hint { animation-name: swipeHintBag; }
 @keyframes packBob { 50% { transform: translateY(-8px) rotate(-2deg); } }
 @keyframes rip { 30% { transform: scale(1.15) rotate(4deg); } to { transform: scale(.2) rotate(-20deg); opacity: 0; } }
 .pack-row { display: flex; gap: 12px; justify-content: center; width: 100%;
@@ -503,3 +531,4 @@ h2 .ic.inline { width: 1.2em; height: 1.2em; }
    past the screen instead of scrolling (found on iPhone: the player maker's Done
    button was out of reach). */
 #pathScroll, #binderScroll, .scrollbody { min-height: 0; -webkit-overflow-scrolling: touch; }
+.sheet h2 .glyph-badge .ic { width: 28px; height: 28px; margin: 0; }

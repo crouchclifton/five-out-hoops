@@ -45,7 +45,7 @@ function voiceKey(text) {
   return h.toString(16).padStart(8, "0");
 }
 const SILENT = "data:audio/wav;base64,UklGRtwBAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YbgBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
-const SFX = ["good", "bad", "pass", "swish", "tick", "go", "whistle", "combo", "fanfare", "coin", "clank", "steal", "pop", "bounce"];
+const SFX = ["good", "bad", "pass", "swish", "tick", "go", "whistle", "combo", "fanfare", "coin", "clank", "steal", "pop", "bounce", "rip", "zip"];
 const voiceEl = new Audio();
 const sfxEls = Object.fromEntries(SFX.map(k => [k, new Audio()]));
 function playEl(el, src) {
@@ -56,7 +56,37 @@ function playEl(el, src) {
   p.catch(() => {});
   return p;
 }
-function sfx(kind) { playEl(sfxEls[kind], `sfx/${kind}.wav`); }
+// Sound effects play through Web Audio once it is running: each sound is loaded
+// into memory once and starts at once. An <audio> element on iPhone can take a
+// few hundred milliseconds to start, which made taps sound late. The <audio>
+// element is only the fallback before the sounds have loaded.
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+const sfxBuf = {};
+function startSfxAudio() {
+  if (!AudioCtx || actx) return;
+  // "playback" makes Web Audio play with the ring switch on silent, like the voice does.
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* older Safari */ }
+  actx = new AudioCtx();
+  if (actx.resume) actx.resume().catch(() => {});
+  for (const k of SFX) {
+    fetch(`sfx/${k}.wav`).then(r => r.arrayBuffer())
+      .then(b => new Promise((ok, bad) => actx.decodeAudioData(b, ok, bad)))
+      .then(buf => { sfxBuf[k] = buf; }).catch(() => {});
+  }
+}
+function sfx(kind) {
+  if (!soundOn) return;
+  if (actx && sfxBuf[kind] && actx.state === "running") {
+    const src = actx.createBufferSource();
+    src.buffer = sfxBuf[kind];
+    src.connect(actx.destination);
+    src.start();
+    return;
+  }
+  if (actx && actx.state !== "running") actx.resume().catch(() => {});
+  playEl(sfxEls[kind], `sfx/${kind}.wav`);
+}
 
 // The coach on screen moves his mouth while he is talking. Each clip comes with
 // the times it has speech (VOICE_TIMES, from tools/make-voice.mjs), so the mouth
@@ -121,16 +151,21 @@ function speak(html) {
 }
 function hush() { voiceEl.pause(); endSpeech(); }
 
-// iPhones only allow sound after the first real tap, and only from a tap event
-// (touchend or click, not pointerdown). On that first tap, play a silent sound
-// on every audio element; after that the game may play them whenever it wants.
+// iPhones only allow sound after a real tap, and only from a tap event (touchend
+// or click, not pointerdown). A swipe or a scroll does not count. So on each touch,
+// until it works, play a silent sound on every audio element; sound counts as
+// unlocked only once one of those actually plays.
 let audioUnlocked = false;
 function unlockAudio() {
+  // After the phone sleeps or the app is in the background, iPhone pauses Web Audio;
+  // any tap wakes it back up.
+  if (actx && actx.state !== "running") actx.resume().catch(() => {});
   if (audioUnlocked) return;
-  audioUnlocked = true;
+  startSfxAudio();
   for (const a of [voiceEl, ...Object.values(sfxEls)]) {
+    if (a.src && !a.src.startsWith("data:") && !a.paused) continue;
     a.src = SILENT;
-    a.play().catch(() => {});
+    a.play().then(() => { audioUnlocked = true; }).catch(() => {});
   }
 }
 ["touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true }));

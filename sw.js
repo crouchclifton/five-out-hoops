@@ -4,13 +4,13 @@
 // Sound files: cache first, since a clip's name changes whenever its words do.
 // BUILD is rewritten by tools/stamp.mjs whenever a game file changes. A new BUILD
 // makes phones install a fresh cache (with every new voice clip) and drop the old one.
-const BUILD = "5a18b90abf";
+const BUILD = "2f4df14e96";
 const CACHE = "five-out-hoops-" + BUILD;
 const SHELL = [
   "./", "index.html", "css/style.css", "manifest.webmanifest",
   "js/core.js", "js/coach.js", "js/lessons.js", "js/minigames.js", "js/cards.js", "js/app.js", "voice/manifest.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
-  ...["good", "bad", "pass", "swish", "tick", "go", "whistle", "combo", "fanfare", "coin", "clank", "steal", "pop", "bounce"].map(s => `sfx/${s}.wav`),
+  ...["good", "bad", "pass", "swish", "tick", "go", "whistle", "combo", "fanfare", "coin", "clank", "steal", "pop", "bounce", "rip", "zip"].map(s => `sfx/${s}.wav`),
 ];
 
 self.addEventListener("install", e => {

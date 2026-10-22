@@ -57,9 +57,12 @@ function drawCourt(theme = "gym") {
   svg.innerHTML = "";
   if (theme === "park") {
     el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "#3f7d5c" }, svg);
-    // worn spots and a crack in the blacktop
-    for (const [x, y, r] of [[18, 22, 10], [82, 34, 8]]) el("circle", { cx: x, cy: y, r, fill: "#356f50", opacity: .35 }, svg);
-    el("path", { d: "M72 0 L70 8 L74 14 L71 22", stroke: "#2a5c42", "stroke-width": .5, fill: "none" }, svg);
+    // a faint diagonal grain, so the blacktop isn't flat
+    const defs = el("defs", {}, svg);
+    const pat = el("pattern", { id: "parkGrain", width: 3, height: 3, patternUnits: "userSpaceOnUse", patternTransform: "rotate(35)" }, defs);
+    el("rect", { width: 1.2, height: 3, fill: "#000", opacity: .045 }, pat);
+    // No worn patches or cracks: round marks look like extra spots in a lesson about spots.
+    el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "url(#parkGrain)" }, svg);
     el("rect", { x: 36, y: 63, width: 28, height: 33, fill: "#2b5f8a", opacity: .85 }, svg);
   } else {
     el("rect", { x: 0, y: 0, width: 100, height: 100, fill: "#e8b26a" }, svg);

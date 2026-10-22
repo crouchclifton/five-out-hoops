@@ -287,6 +287,8 @@ Start over?
 Stay wide! A crowded court is easy to guard.
 Sweet!
 Swing the ball from side to side to make the defense run.
+Swipe across the top to rip it open!
+Swipe across the zipper to open it!
 Swish Shot
 Swish Shot! Flick the ball up at the hoop. Make as many baskets as you can!
 TAP in the green!
@@ -300,8 +302,6 @@ Tap an empty spot for number 4.
 Tap an empty spot for number 5.
 Tap the TOP spot.
 Tap the card to flip it
-Tap the gym bag to open it!
-Tap the pack to open it!
 That spot is inside the line. 5-Out spots are all OUTSIDE the 3-point line.
 That teammate has the ball! Pick the one right next to the empty spot.
 That's inside the line. Pick a spot OUTSIDE the 3-point line.

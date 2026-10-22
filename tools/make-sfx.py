@@ -1,5 +1,5 @@
 """Builds the sound effects in sfx/ as small WAV files. Run: python3 tools/make-sfx.py"""
-import math, os, struct, wave
+import math, os, random, struct, wave
 
 RATE = 22050
 OUT = os.path.join(os.path.dirname(__file__), "..", "sfx")
@@ -19,6 +19,34 @@ def notes(parts):
                  "triangle": 4 * abs(ph - .5) - 1}[kind]
             env = min(1, i / (RATE * .005)) * math.exp(-4 * t / dur)  # quick attack, fade out
             buf[n0 + i] += v * vol * env
+    return buf
+
+
+def tear(dur, crackle, bright):
+    """Paper tearing: noise in tiny bursts. crackle = bursts per second, bright = how thin it sounds."""
+    rnd = random.Random(5)
+    buf, last, burst = [], 0.0, 0.0
+    for i in range(int(dur * RATE)):
+        t = i / RATE
+        if rnd.random() < crackle / RATE:
+            burst = .6 + rnd.random() * .4
+        burst *= .9985
+        n = rnd.uniform(-1, 1)
+        hp = n - last * bright  # thin out the low end so it sounds like paper, not wind
+        last = n
+        env = min(1, t / .01) * (1 - t / dur) ** .6
+        buf.append(hp * burst * env * .5)
+    return buf
+
+
+def zipper(dur, teeth):
+    """A zipper: quick clicks that speed up."""
+    buf = [0.0] * int(dur * RATE)
+    for k in range(teeth):
+        start = int(dur * RATE * (k / teeth) ** .8)
+        for i in range(int(RATE * .006)):
+            if start + i < len(buf):
+                buf[start + i] += math.sin(2 * math.pi * (1800 + 30 * k) * i / RATE) * .35 * (1 - i / (RATE * .006))
     return buf
 
 
@@ -43,3 +71,5 @@ write("steal", notes([(0, 330, .12, "square", .15), (.1, 220, .25, "square", .15
 write("pop", notes([(0, 600, .06, "sine", .5), (.03, 900, .08, "sine", .35)]))
 write("bounce", notes([(0, 110, .09, "sine", .8), (0, 220, .05, "triangle", .3)]))
 write("swish", notes([(0, 523, .12, "sine", .45), (.08, 659, .12, "sine", .45), (.16, 784, .12, "sine", .45), (.24, 1047, .3, "sine", .45)]))
+write("rip", tear(.32, 900, .95))
+write("zip", zipper(.32, 22))

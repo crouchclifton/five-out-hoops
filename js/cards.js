@@ -258,19 +258,61 @@ function openPack(pack) {
     html("h2", "", box, pack.title);
     const wrap = html("div", "pack-wrap", box);
     const bag = pack.kind === "bag";
-    const foil = bag ? html("button", "foil bagpack", wrap, icon("bag"))
-      : html("button", "foil", wrap, `<div class="foil-top"></div><div class="foil-ball">${icon("ball")}</div><div class="foil-text">5-OUT HOOPS<br><small>${pack.n} ${pack.n === 1 ? "CARD" : "CARDS"}</small></div>`);
-    const hint = html("p", "", box, bag ? "Tap the gym bag to open it!" : "Tap the pack to open it!");
+    // The pack opens with a swipe across its top, like ripping open real cards.
+    // The gym bag opens the same way, with a zipper.
+    const foil = bag ? html("div", "foil bagpack", wrap, `${icon("bag")}<div class="zip-track"><i class="zip-pull"></i></div><div class="swipe-hint"></div>`)
+      : html("div", "foil", wrap, `<div class="foil-top"><div class="tear"></div></div><div class="foil-ball">${icon("ball")}</div>` +
+        `<div class="foil-text">5-OUT HOOPS<br><small>${pack.n} ${pack.n === 1 ? "CARD" : "CARDS"}</small></div><div class="swipe-hint"></div>`);
+    foil.tabIndex = 0;
+    foil.setAttribute("role", "button");
+    const SWIPE_LINE = bag ? "Swipe across the zipper to open it!" : "Swipe across the top to rip it open!";
+    const hint = html("p", "", box, SWIPE_LINE);
     sfx("coin");
-    speak(bag ? "Tap the gym bag to open it!" : "Tap the pack to open it!");
+    speak(SWIPE_LINE);
     // Draw (and save) the cards right away, so leaving the screen can't lose them.
     const pulls = [];
     for (let i = 0; i < pack.n; i++) pulls.push(drawCard(pack.odds, pack.force[i]));
     save.packs++; persist();
-    foil.onclick = () => {
-      foil.onclick = null;
+
+    let startX = null, dir = 1, progress = 0, opened = false, soundAt = 0;
+    const setRip = p => { progress = p; foil.style.setProperty("--rip", p); foil.style.setProperty("--dir", dir); };
+    foil.addEventListener("pointerdown", e => {
+      if (opened) return;
+      startX = e.clientX; soundAt = 0;
+      foil.classList.add("dragging"); foil.classList.remove("springback");
+      try { foil.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+    });
+    foil.addEventListener("pointermove", e => {
+      if (startX === null || opened) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 4) dir = dx < 0 ? -1 : 1;
+      setRip(Math.min(1, Math.abs(dx) / (foil.offsetWidth * .75)));
+      // A little tearing (or zipping) sound as the finger moves along.
+      if (progress - soundAt > .3) { soundAt = progress; sfx(bag ? "zip" : "rip"); }
+      if (progress >= 1) open();
+    });
+    const release = () => {
+      if (startX === null || opened) return;
+      const moved = progress;
+      startX = null;
+      foil.classList.remove("dragging");
+      if (moved > .7) { open(); return; }
+      // Not far enough: the flap springs back. A plain tap gets a wiggle and a reminder.
+      foil.classList.add("springback"); setRip(0);
+      if (moved < .05) { foil.classList.remove("wiggle"); void foil.offsetWidth; foil.classList.add("wiggle"); speak(SWIPE_LINE); }
+    };
+    foil.addEventListener("pointerup", release);
+    foil.addEventListener("pointercancel", release);
+    foil.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+
+    function open() {
+      if (opened) return;
+      opened = true;
+      setRip(1);
+      foil.classList.remove("dragging");
       foil.classList.add(bag ? "unzip" : "rip");
-      sfx("pop");
+      sfx(bag ? "zip" : "rip");
+      setTimeout(() => sfx("pop"), 250);
       setTimeout(() => {
         wrap.remove();
         hint.textContent = "Tap a card to flip it!";
@@ -303,8 +345,8 @@ function openPack(pack) {
             }
           };
         });
-      }, 450);
-    };
+      }, 650);
+    }
   });
 }
 
