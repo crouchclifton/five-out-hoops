@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1d3557">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>5-Out Hoops</title>
+<link rel="icon" href="data:,">
 <style>
   :root {
     --navy: #1d3557; --sky: #e0f2fe; --gold: #fde047; --red: #ef4444; --green: #16a34a;
@@ -166,6 +167,7 @@
   </div>
 </div>
 
+<script src="voice/manifest.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
@@ -221,63 +223,48 @@ let SPEED = 32;
 let soundOn = localStorage.getItem("fiveout-sound") !== "off";
 
 // ---------- Sound and voice ----------
-let audio;
-function tone(freq, dur, type = "sine", when = 0, vol = 0.12) {
-  if (!soundOn) return;
-  try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    if (audio.state !== "running") audio.resume();
-    const o = audio.createOscillator(), g = audio.createGain();
-    o.type = type; o.frequency.value = freq;
-    const t = audio.currentTime + when;
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur);
-  } catch (e) {}
-}
-function sfx(kind) {
-  if (kind === "good") { tone(660, .12); tone(880, .18, "sine", .1); }
-  else if (kind === "bad") { tone(200, .25, "square", 0, .05); }
-  else if (kind === "pass") { tone(420, .08, "triangle"); }
-  else if (kind === "swish") { tone(523, .1); tone(659, .1, "sine", .08); tone(784, .1, "sine", .16); tone(1047, .25, "sine", .24); }
-}
-function speak(html) {
-  if (!soundOn || !window.speechSynthesis) return;
-  const t = html.replace(/<[^>]+>/g, "").replace(/#(\d)/g, "number $1")
+// Everything plays through <audio> elements: recorded voice clips (voice/) and
+// short sound effects (sfx/). iPhone Safari treats these like video sound, so
+// they play in silent mode and don't fight each other. The phone's built-in
+// speech (speechSynthesis) was silent on iPhones and knocked out the other
+// sounds, so the game no longer uses it.
+// voice/ is built by tools/make-voice.mjs from the text in this file.
+function cleanSpeech(html) {
+  return html.replace(/<[^>]+>/g, "").replace(/#(\d)/g, "number $1")
     .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, "").replace(/\s+/g, " ").trim();
-  if (!t) { speechSynthesis.cancel(); return; }
-  const u = new SpeechSynthesisUtterance(t);
-  u.rate = 0.95; u.pitch = 1.1;
-  // iOS Safari drops an utterance spoken in the same instant as cancel(),
-  // so only cancel when something is talking, and wait a beat after it.
-  if (speechSynthesis.speaking || speechSynthesis.pending) {
-    speechSynthesis.cancel();
-    setTimeout(() => speechSynthesis.speak(u), 80);
-  } else {
-    speechSynthesis.speak(u);
-  }
+}
+function voiceKey(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, "0");
+}
+const SILENT = "data:audio/wav;base64,UklGRtwBAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YbgBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+const voiceEl = new Audio();
+const sfxEls = { good: new Audio(), bad: new Audio(), pass: new Audio(), swish: new Audio() };
+function playEl(el, src) {
+  if (!soundOn) return;
+  if (!el.src.endsWith(src)) el.src = src;
+  else { el.pause(); el.currentTime = 0; }
+  el.play().catch(() => {});
+}
+function sfx(kind) { playEl(sfxEls[kind], `sfx/${kind}.wav`); }
+function speak(html) {
+  const t = cleanSpeech(html);
+  const key = voiceKey(t);
+  if (!t || !window.VOICE || !VOICE.has(key)) { voiceEl.pause(); return; }
+  playEl(voiceEl, `voice/${key}.m4a`);
 }
 
 // iPhones only allow sound after the first real tap, and only from a tap event
-// (touchend or click, not pointerdown). On that first tap, wake up both the
-// sound effects and the voice. "playback" lets sound play even with the
-// ringer switch on silent (Safari 17 and later).
+// (touchend or click, not pointerdown). On that first tap, play a silent sound
+// on every audio element; after that the game may play them whenever it wants.
 let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
-  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
-  try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    audio.resume();
-    const src = audio.createBufferSource();
-    src.buffer = audio.createBuffer(1, 1, 22050);
-    src.connect(audio.destination);
-    src.start(0);
-  } catch (e) {}
-  if (window.speechSynthesis) {
-    const u = new SpeechSynthesisUtterance(" ");
-    u.volume = 0;
-    speechSynthesis.speak(u);
+  for (const el of [voiceEl, ...Object.values(sfxEls)]) {
+    el.src = SILENT;
+    el.play().catch(() => {});
   }
 }
 ["touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true }));
@@ -524,7 +511,7 @@ async function possession(o = {}) {
         zones: [{ key: "drive", x: HOOP.x, y: HOOP.y - 4, r: 7, glow: true }],
         buttons: [{ key: "drive", label: "🏃 Drive!" }, { key: "pass", label: "🤝 Pass" }],
         check: k => o.drive === "open"
-          ? (k === "drive" ? OK : { ok: false, msg: "Look! Your defender is 💤 and NOT in the way. Rule #1: <b>attack the basket!</b>" })
+          ? (k === "drive" ? OK : { ok: false, msg: "Look! Your defender is sleeping 💤 and NOT in the way. Rule #1: <b>attack the basket!</b>" })
           : (k === "pass" ? OK : { ok: false, msg: "Your defender is standing between you and the hoop. <b>Pass it</b> to a teammate!" }),
       });
     } else if (N) {
@@ -587,7 +574,7 @@ async function possession(o = {}) {
         zones: [{ key: "pass", x: cutter.x, y: cutter.y, r: 6, glow: true }],
         buttons: [{ key: "pass", label: `🎯 Pass to #${cutter.id}` }, { key: "hold", label: "✋ Not open", alt: true }],
         check: k => open
-          ? (k === "pass" ? OK : { ok: false, msg: `Look! #${cutter.id}'s defender is 💤 way back. #${cutter.id} is OPEN. Pass it back!` })
+          ? (k === "pass" ? OK : { ok: false, msg: `Look! #${cutter.id}'s defender is sleeping 💤 way back. #${cutter.id} is OPEN. Pass it back!` })
           : (k === "hold" ? OK : { ok: false, msg: `The defender is right with #${cutter.id}. Not open! Hold the ball.` }),
       });
     } else if (N) {
@@ -631,7 +618,7 @@ async function possession(o = {}) {
     await askTap({
       text: `One spot is still empty. Where does #${cutter.id} go? Tap the <b>empty spot</b>.`,
       zones: Object.entries(SPOTS).map(([k, s]) => ({ key: k, x: s.x, y: s.y })),
-      check: k => k === rot.dest ? OK : { ok: false, msg: "Someone is already there! Find the spot with the <b>?</b>" },
+      check: k => k === rot.dest ? OK : { ok: false, msg: "Someone is already there! Find the <b>empty</b> spot." },
     });
     mark.remove();
     cutter.spot = rot.dest;
@@ -671,6 +658,7 @@ async function level1() {
   await next("In 5-Out, there are <b>5 spots</b>, all <b>outside</b> the big curved line. Let's find them!", "Let's go! 🏀");
   const isRight = (k, q) => q === "T" ? k === "T" : q === "W" ? (k === "LW" || k === "RW") : (k === "LC" || k === "RC");
   const word = { T: "TOP", W: "WING", C: "CORNER" };
+  const ASK_SPOT = { T: "Tap the <b>TOP</b> spot.", W: "Tap a <b>WING</b> spot.", C: "Tap a <b>CORNER</b> spot." };
   const hint = {
     T: "The <b>top</b> is in the middle, out front, far from the hoop.",
     W: "<b>Wings</b> are on the sides, like a bird's wings!",
@@ -683,7 +671,7 @@ async function level1() {
     const q = qs[i];
     setProgress(`${i + 1}/${qs.length + 5}`);
     const k = await askTap({
-      text: `Tap ${q === "T" ? "the" : "a"} <b>${word[q]}</b> spot.`,
+      text: ASK_SPOT[q],
       zones,
       check: k => isRight(k, q) ? OK
         : k[0] === "d" ? { ok: false, msg: "That spot is <b>inside</b> the line. 5-Out spots are all OUTSIDE the 3-point line." }
@@ -878,7 +866,7 @@ function confetti() {
 
 function stopRun() {
   RUN++;
-  if (window.speechSynthesis) speechSynthesis.cancel();
+  voiceEl.pause();
   players.forEach(p => p.anim = null);
   if (ball) ball.anim = null;
 }
@@ -893,7 +881,7 @@ function renderSound() { $("#soundBtn").textContent = soundOn ? "🔊" : "🔇";
 $("#soundBtn").onclick = () => {
   soundOn = !soundOn;
   localStorage.setItem("fiveout-sound", soundOn ? "on" : "off");
-  if (!soundOn && window.speechSynthesis) speechSynthesis.cancel();
+  if (!soundOn) voiceEl.pause();
   renderSound();
 };
 renderSound();
