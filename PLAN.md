@@ -15,6 +15,10 @@ Based on two screenshots Clifton sent from a Mario Party mini game (the YouTube 
 
 **Where it goes:** it becomes Lesson 5's bonus game (Lesson 5 "Attack!" has none today). Lesson 6 and the trophy keep "pick any bonus game", so it shows up there too.
 
+**Art style (Clifton, October 22, 2026): option 1, polished 2D.** Not 3D, and not trying to match the Switch. Same canvas drawing as the other bonus games, with more detail and "juice": a drawn brick wall, gold rims on the middle row, rims that wobble and nets that swish, shooters who crouch and jump when they shoot, confetti and screen shake on big scores, a crowd sound. Three.js with free 3D models was the step up, and it was turned down for now (heavier pages, stutter on older iPhones, generic characters).
+
+**Teaching scope (Clifton, October 22, 2026):** the team is taught only up to about 6:10 of Coach Russ's video: setup, the three rules, and the four basic pass rotations (they end at 6:07; 6:07 to 7:08 is an ad). Everything after it (screens away, on-ball screens, pick and roll, backdoor cuts at 11:40, post seals) stays out. The captions with timestamps are kept locally in `local-data/coach-russ-video/` (gitignored, since the repo is public and the words are Coach Russ's).
+
 **Work list:**
 - `js/minigames.js`: new `HoopWall` class and a `GAMES.hoopwall` entry (title, intro, medal tiers). Reuses `drawHoop`, `drawBall`, `drawText`, `Floaters`.
 - `js/lessons.js`: Lesson 5 `game: "hoopwall"`.
