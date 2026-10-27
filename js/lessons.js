@@ -558,9 +558,9 @@ const LESSONS = [
     blurb: "Use all 3 rules. Every smart read scores a point!" },
   // Unit 3 (October 27, 2026): review, still only the first 6:10 of the video,
   // each part broken down further or taught a different way.
-  { title: "Where Do I Go?", glyph: "rotate", game: null, run: lesson7,
+  { title: "Where Do I Go?", glyph: "rotate", game: "rotrush", run: lesson7,
     blurb: "Each kind of pass sends the passer to a different spot. Learn all 4!" },
-  { title: "Cut in Front", glyph: "fake", game: null, run: lesson8,
+  { title: "Cut in Front", glyph: "fake", game: "cutcatch", run: lesson8,
     blurb: "Step away first, then cut in front of your defender." },
   { title: "Corner Smarts", glyph: "corner", game: null, run: lesson9,
     blurb: "In the corner? Pass up to the wing, then come right back." },

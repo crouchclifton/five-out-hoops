@@ -1,3 +1,10 @@
+# Round 6 (October 27, 2026): two Unit 3 bonus games, done
+
+Clifton: "Design and implement a couple of new mini games for unit 3."
+- **Rotation Rush** (Lesson 7): a pass and a cut play out; tap the spot where the passer ends up. The team really rotates after each answer, so the next pass starts from the new spots. Speeds up as you score; 5 in a row is "on fire" (2 points each). A wrong tap shows the right spot before moving on. Medals 6 / 12 / 20.
+- **Cutter Catch** (Lesson 8): you hold the ball on a wing while #1 cuts from the top with his defender. When the defender falls a step behind, the cutter is open: tap to pass for a layup (+2). Covered: stolen. Too slow: the cut ends. The read is judged when you tap, with 0.15 s of grace. Cuts and open moments get shorter as you go. Medals 10 / 18 / 26.
+Medal goals came from simulated players (Rotation Rush about 6 / 14 / 30 for slow / steady / quick; Cutter Catch about 13 / 23 / 30).
+
 # Round 5 (October 27, 2026): done
 
 Clifton: "Work on the updates" (Hoop Wall), plus more lessons because his son finished them all quickly ("still from the first 6:10 of the video, but maybe review or broken down further or taught in a different way"), plus more cards because his son had only 3 left, "possibly make them harder to collect or don't give them out so often or so many at a time."

@@ -68,6 +68,8 @@ const ICONS = {
   coach: `<rect x="9" y="7" width="26" height="34" rx="3" ${wht(3)}/><path d="M15 17l5 5M20 17l-5 5" ${wht(2.6)}/><path d="M16 33q4-8 12-9" ${wht(2.4)} stroke-dasharray="1 4"/><circle cx="34" cy="34" r="7" fill="none" stroke="#fff" stroke-width="3.2"/><path d="M39 39l5 5" ${wht(3.6)}/>`,
   zap: `<circle cx="24" cy="24" r="18" ${wht(3)}/><path d="M27 9L15 27h8l-3 13 13-19h-8z" fill="#fff"/>`,
   hoopwall: `<rect x="4" y="5" width="40" height="38" rx="3" ${wht(2.6)}/><path d="M4 18h40M4 31h40M17 5v13M31 18v13M17 31v12" stroke="#fff" stroke-width="1.4" opacity=".55"/>${[[12, 14], [34, 14], [24, 27], [12, 40], [34, 40]].map(([x, y]) => `<ellipse cx="${x}" cy="${y - 2}" rx="5" ry="1.8" fill="none" stroke="#fff" stroke-width="2.6"/>`).join("")}`,
+  rotrush: `<circle cx="10" cy="14" r="5" fill="#fff"/><circle cx="38" cy="14" r="5" fill="#fff"/><circle cx="24" cy="38" r="5" fill="#fff"/><path d="M15 12q9-6 18 0M36 20q-2 10-8 14M19 35q-8-3-9-15" ${wht(2.6)}/><path d="M30 9l3 3-4 2" ${wht(2.4)}/>`,
+  cutcatch: `<circle cx="9" cy="30" r="6" fill="#fff"/><path d="M15 28l14-10" ${wht(2.6)} stroke-dasharray="1 4.5"/><circle cx="34" cy="14" r="6" fill="#fff"/><path d="M34 21v8q0 8 8 11" ${wht(2.6)}/><path d="M24 22l5-4 1 6" ${wht(2.4)}/>`,
   // Little buttons inside lessons
   drive: `<path d="M27 4L12 27h10l-3 17 17-25H25z" fill="#ffc800" ${ink(2)}/>`,
   passBtn: `<circle cx="10" cy="30" r="6" fill="${NAVY}" ${ink(2)}/><circle cx="38" cy="30" r="6" fill="${NAVY}" ${ink(2)}/><path d="M15 25q9-12 18 0" fill="none" stroke="${INK}" stroke-width="2.4" stroke-dasharray="1 4.5" stroke-linecap="round"/><circle cx="24" cy="16" r="5.5" fill="${ORANGE}" ${ink(2)}/>`,

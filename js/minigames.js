@@ -27,6 +27,16 @@ const GAMES = {
     intro: "Hoop Wall! The hoops slide by. <b>Hold</b> to power up and <b>let go</b> when the meter is level with a row. A <b>green</b> hoop means it will go in. Higher hoops score more!",
     tiers: [13, 20, 27], unit: "points", make: () => new HoopWall(),
   },
+  rotrush: {
+    title: "Rotation Rush", glyph: "rotrush",
+    intro: "Rotation Rush! Watch the pass and the cut, then <b>tap the spot</b> where the passer ends up. Get as many as you can!",
+    tiers: [6, 12, 20], unit: "points", make: () => new RotationRush(),
+  },
+  cutcatch: {
+    title: "Cutter Catch", glyph: "cutcatch",
+    intro: "Cutter Catch! Your teammate is cutting to the hoop. <b>Tap to pass</b> when he gets <b>in front</b> of his defender. Too soon and it gets stolen!",
+    tiers: [10, 18, 26], unit: "points", make: () => new CutterCatch(),
+  },
   dribble: {
     title: "Dribble Dash", glyph: "dribble",
     intro: "Dribble Dash! Tap <b>left, right, left, right</b> as fast as you can to beat the defender to the hoop!",
@@ -861,6 +871,264 @@ class HoopWall {
     }
   }
 }
+// ---------- Unit 3 games share a top-down court, like Pass Pop ----------
+// g needs P(x, y) (court units 0..100 to screen) and s (pixels per unit).
+function courtLayout(g, W, H, top = 130, bottom = 120) {
+  const size = Math.min(W - 20, H - top - bottom);
+  g.s = size / 100; g.ox = (W - size) / 2; g.oy = top + (H - top - bottom - size) / 2;
+}
+function drawMiniCourt(ctx, g, W, H) {
+  const s = g.s, [x0, y0] = g.P(0, 0);
+  ctx.fillStyle = "#1d3557"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#e8b26a"; ctx.fillRect(x0, y0, 100 * s, 100 * s);
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+  ctx.strokeRect(...g.P(36, 63), 28 * s, 33 * s);
+  ctx.beginPath(); ctx.moveTo(...g.P(10, 96)); ctx.lineTo(...g.P(10, 80));
+  const a = Math.atan2(9, 40);
+  ctx.arc(...g.P(50, 89), 41 * s, -Math.PI + a, -a, false);
+  ctx.lineTo(...g.P(90, 96)); ctx.stroke();
+  ctx.strokeStyle = "#f97316"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(...g.P(50, 89), 2.4 * s, 0, 7); ctx.stroke();
+}
+function drawMate(ctx, g, x, y, id, ring) {
+  const [px, py] = g.P(x, y), s = g.s;
+  if (ring) { ctx.strokeStyle = ring; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(px, py, 6.6 * s, 0, 7); ctx.stroke(); }
+  ctx.fillStyle = COLORS[0]; ctx.strokeStyle = "#f97316"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(px, py, 4.4 * s, 0, 7); ctx.fill(); ctx.stroke();
+  drawText(ctx, String(id), px, py + 1, 4.6 * s, "#fff");
+}
+function drawDefender(ctx, g, x, y) {
+  const [qx, qy] = g.P(x, y), s = g.s;
+  ctx.fillStyle = "#ef4444"; ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(qx, qy, 3.6 * s, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(1.5, s * .45); ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(qx - 1.7 * s, qy - .7 * s); ctx.lineTo(qx - .4 * s, qy - .1 * s);
+  ctx.moveTo(qx + 1.7 * s, qy - .7 * s); ctx.lineTo(qx + .4 * s, qy - .1 * s); ctx.stroke();
+}
+const lerp = (a, b, k) => a + (b - a) * k;
+const smooth = k => k * k * (3 - 2 * k);
+
+// ---------- Rotation Rush: where does the passer end up? (Lesson 7) ----------
+// A pass, a cut, and the player taps the spot where the passer finishes, as many
+// times as they can in 30 seconds. After each answer the team really rotates, so the
+// next pass starts from the new spots, like a game.
+const PASS_NAME = { TW: "Top to wing!", WC: "Wing to corner!", CW: "Corner to wing!", WT: "Wing to top!" };
+class RotationRush {
+  constructor() {
+    this.score = 0; this.time = 30; this.clock = 0; this.streak = 0; this.fx = new Floaters();
+    this.at = { T: 1, LW: 2, RW: 3, LC: 4, RC: 5 };          // spot -> player id
+    this.pos = {}; for (const [k, id] of Object.entries(this.at)) this.pos[id] = { ...SPOTS[k] };
+    this.holder = "T"; this.phase = "wait"; this.t = 0;
+  }
+  resize(W, H) { this.W = W; this.H = H; courtLayout(this, W, H); }
+  P(x, y) { return [this.ox + x * this.s, this.oy + y * this.s]; }
+  start() { this.running = true; this.newRound(); }
+  hud() { return [icon("ball") + this.score, icon("clock") + Math.ceil(this.time)]; }
+  get pace() { return Math.max(.55, 1 - this.score * .03); } // gets quicker as you score
+  newRound() {
+    const from = this.holder, to = pick(PASSES[from]);
+    this.r = { from, to, rot: rotation(from, to), id: this.at[from], kind: passType(from, to) };
+    this.phase = "pass"; this.t = 0;
+    this.ball = { ...SPOTS[from] };
+    sfx("pass");
+  }
+  down(x, y) {
+    if (this.phase !== "ask") return;
+    let best = null, bd = Infinity;
+    for (const [k, sp] of Object.entries(SPOTS)) {
+      const [px, py] = this.P(sp.x, sp.y), d = Math.hypot(px - x, py - y);
+      if (d < bd) { bd = d; best = k; }
+    }
+    if (bd > 11 * this.s) return;
+    const [px, py] = this.P(SPOTS[best].x, SPOTS[best].y);
+    if (best === this.r.rot.dest) {
+      this.streak++;
+      const pts = this.streak >= 5 ? 2 : 1;
+      this.score += pts;
+      sfx(this.streak === 5 ? "combo" : "good");
+      this.fx.add(this.streak === 5 ? "ON FIRE!" : "+" + pts, px, py - 30, "#ffc800");
+      this.phase = "fill"; this.t = 0;
+    } else {
+      this.streak = 0;
+      sfx("bad");
+      this.fx.add("Oops!", px, py - 30, "#fca5a5", 28);
+      this.phase = "show"; this.t = 0; // show the right spot for a moment
+    }
+  }
+  update(dt) {
+    this.clock += dt; this.fx.update(dt);
+    if (this.running) { this.time -= dt; if (this.time <= 0) { this.time = 0; this.running = false; this.endT = 0; } }
+    if (this.endT !== undefined) { this.endT += dt; if (this.endT > .8) this.done = true; return; }
+    if (!this.r) return;
+    this.t += dt;
+    const { from, to, rot, id } = this.r, p = this.pace;
+    if (this.phase === "pass") {
+      const k = Math.min(1, this.t / (.35 * p));
+      this.ball = { x: lerp(SPOTS[from].x, SPOTS[to].x, k), y: lerp(SPOTS[from].y, SPOTS[to].y, k) };
+      if (k >= 1) { this.phase = "cut"; this.t = 0; }
+    } else if (this.phase === "cut") {
+      const k = smooth(Math.min(1, this.t / (.4 * p))), cp = cutPoint(from);
+      this.pos[id] = { x: lerp(SPOTS[from].x, cp.x, k), y: lerp(SPOTS[from].y, cp.y, k) };
+      if (k >= 1) { this.phase = "ask"; this.t = 0; }
+    } else if (this.phase === "show") {
+      if (this.t > .9) { this.phase = "fill"; this.t = 0; }
+    } else if (this.phase === "fill") {
+      if (!this.r.start) {
+        // where everyone moves from and to
+        this.r.start = {}; for (const pid in this.pos) this.r.start[pid] = { ...this.pos[pid] };
+        this.r.goal = {};
+        for (const [a, b] of rot.fills) this.r.goal[this.at[a]] = b;
+        this.r.goal[id] = rot.dest;
+      }
+      const k = smooth(Math.min(1, this.t / (.45 * p)));
+      for (const pid in this.r.goal) {
+        const s0 = this.r.start[pid], s1 = SPOTS[this.r.goal[pid]];
+        this.pos[pid] = { x: lerp(s0.x, s1.x, k), y: lerp(s0.y, s1.y, k) };
+      }
+      if (k >= 1) {
+        const at = {}; for (const [k2, pid] of Object.entries(this.at)) at[k2] = pid;
+        delete at[from];
+        for (const [a, b] of rot.fills) { at[b] = this.at[a]; if (at[a] === this.at[a]) delete at[a]; }
+        at[rot.dest] = id;
+        this.at = at; this.holder = to;
+        if (this.running) this.newRound(); else this.r = null;
+      }
+    }
+  }
+  draw(ctx) {
+    const { W, H } = this;
+    drawMiniCourt(ctx, this, W, H);
+    const asking = this.phase === "ask" || this.phase === "show";
+    // spots: tap targets while asking; the right one glows during "show"
+    for (const [k, sp] of Object.entries(SPOTS)) {
+      const [px, py] = this.P(sp.x, sp.y);
+      const right = this.phase === "show" && k === this.r.rot.dest;
+      ctx.strokeStyle = right ? "#58cc02" : asking ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.4)";
+      ctx.lineWidth = right ? 6 : 3; ctx.setLineDash(right ? [] : [5, 5]);
+      ctx.beginPath(); ctx.arc(px, py, (asking ? 6.4 + Math.sin(this.clock * 8) * .5 : 5.4) * this.s, 0, 7); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    for (const [pid, q] of Object.entries(this.pos)) {
+      const cutter = this.r && +pid === this.r.id && asking;
+      drawMate(ctx, this, q.x, q.y, pid, cutter ? "#ffc800" : null);
+    }
+    if (this.ball) { const [bx, by] = this.P(this.ball.x + 3, this.ball.y + 2.6); drawBall(ctx, bx, by, 2.2 * this.s, this.clock * 3); }
+    if (this.r) {
+      drawText(ctx, PASS_NAME[this.r.kind], W / 2, this.oy - 30, 28, "#ffc800");
+      if (asking) drawText(ctx, `Where does #${this.r.id} go? Tap it!`, W / 2, this.oy + 100 * this.s + 34, 22, "#fff");
+    }
+    if (this.streak >= 5) drawText(ctx, "ON FIRE x2", W / 2, this.oy + 100 * this.s + 66, 20, "#fb923c");
+    this.fx.draw(ctx);
+  }
+}
+
+// ---------- Cutter Catch: pass to the cutter when he gets in front (Lesson 8) ----------
+// You have the ball on the wing. A teammate cuts from the top to the hoop with his
+// defender chasing. When the cutter gets IN FRONT of his defender, he is open: tap to
+// pass for a layup. Pass while he is covered and it gets stolen. Wait too long and the
+// cut is over.
+class CutterCatch {
+  constructor() { this.score = 0; this.time = 30; this.clock = 0; this.fx = new Floaters(); this.reps = 0; this.lastOpen = -9; }
+  resize(W, H) { this.W = W; this.H = H; courtLayout(this, W, H); }
+  P(x, y) { return [this.ox + x * this.s, this.oy + y * this.s]; }
+  start() { this.running = true; this.newCut(); }
+  hud() { return [icon("ball") + this.score, icon("clock") + Math.ceil(this.time)]; }
+  newCut() {
+    this.side = Math.random() < .5 ? "LW" : "RW";
+    this.dur = Math.max(1.35, 2 - this.reps * .05);   // cuts get quicker
+    // one or two moments in the cut when he gets in front (open), each a bit shorter as you go
+    const open = Math.max(.32, .6 - this.reps * .02) / this.dur;
+    const n = Math.random() < .5 ? 1 : 2;
+    this.windows = [];
+    let u = .18 + Math.random() * .2;
+    for (let i = 0; i < n && u + open < .97; i++) { this.windows.push([u, u + open]); u += open + .15 + Math.random() * .2; }
+    this.u = 0; this.cover = 1; this.phase = "cut"; this.t = 0; this.ball = null; this.reps++;
+    this.cutter = { ...SPOTS.T }; this.def = { ...SPOTS.T };
+  }
+  isOpenAt(u) { return this.windows.some(([a, b]) => u >= a && u <= b); }
+  get openNow() { return this.cover < .4; }
+  path(u) {
+    // from the top, curving toward the ball side, down to the front of the rim
+    const sx = SPOTS.T.x, sy = SPOTS.T.y, ex = 50 + (this.side === "LW" ? -3 : 3), ey = 82;
+    const bend = (this.side === "LW" ? -1 : 1) * 10 * Math.sin(Math.PI * u);
+    return { x: lerp(sx, ex, u) + bend, y: lerp(sy, ey, u) };
+  }
+  down() {
+    if (this.phase !== "cut" || !this.running) return;
+    // The read happens when you let the pass go (a pass leads the cutter), with a
+    // little grace for a young player's reaction time.
+    this.good = this.openNow || this.clock - this.lastOpen < .15;
+    this.phase = "pass"; this.t = 0;
+    const h = SPOTS[this.side];
+    this.ball = { x: h.x, y: h.y };
+    sfx("pass");
+  }
+  update(dt) {
+    this.clock += dt; this.fx.update(dt);
+    if (this.running) { this.time -= dt; if (this.time <= 0) { this.time = 0; this.running = false; } }
+    if (!this.running && this.phase === "cut") { this.endT = (this.endT || 0) + dt; if (this.endT > .6) this.done = true; return; }
+    this.t += dt;
+    if (this.phase === "cut" || this.phase === "pass") {
+      this.u = Math.min(1, this.u + dt / this.dur);
+      // the defender covers (between the ball and the cutter) or trails a step behind
+      const wantCover = this.phase === "pass" ? (this.good ? 0 : 1) : this.isOpenAt(this.u) ? 0 : 1;
+      this.cover += (wantCover - this.cover) * Math.min(1, dt * 10);
+      // Covering: a full step toward the ball, between the cutter and the pass.
+      // Beaten: a full step behind, back up the cutter's path. Far enough apart to see.
+      const c = this.path(this.u), prev = this.path(Math.max(0, this.u - .03)), h = SPOTS[this.side];
+      this.cutter = c;
+      const mx = c.x - prev.x, my = c.y - prev.y, M = Math.hypot(mx, my) || 1;
+      const back = { x: c.x - mx / M * 9, y: c.y - my / M * 9 };
+      const dx = h.x - c.x, dy = h.y - c.y, L = Math.hypot(dx, dy) || 1;
+      const front = { x: c.x + dx / L * 8, y: c.y + dy / L * 8 };
+      this.def = { x: lerp(back.x, front.x, this.cover), y: lerp(back.y, front.y, this.cover) };
+      if (this.openNow) this.lastOpen = this.clock;
+    }
+    if (this.phase === "cut" && this.u >= 1) {
+      this.fx.add("Too late!", ...this.P(50, 70), "#fca5a5", 28); sfx("bad");
+      this.phase = "after"; this.t = 0;
+    } else if (this.phase === "pass") {
+      const k = Math.min(1, this.t / .28), h = SPOTS[this.side];
+      this.ball = { x: lerp(h.x, this.cutter.x, k), y: lerp(h.y, this.cutter.y, k) };
+      if (k >= 1) {
+        if (this.good) {
+          this.phase = "layup"; this.t = 0; sfx("good");
+        } else {
+          this.phase = "after"; this.t = 0; this.ball = null; sfx("steal");
+          this.fx.add("Stolen!", ...this.P(this.def.x, this.def.y - 8), "#fca5a5", 28);
+        }
+      }
+    } else if (this.phase === "layup") {
+      const k = Math.min(1, this.t / .4);
+      this.ball = { x: lerp(this.cutter.x, HOOP.x, k), y: lerp(this.cutter.y, HOOP.y, k) - Math.sin(Math.PI * k) * 8 };
+      if (k >= 1) {
+        this.score += 2; sfx("swish");
+        this.fx.add("Give and go! +2", ...this.P(50, 72), "#ffc800", 30);
+        this.phase = "after"; this.t = 0; this.ball = null;
+      }
+    } else if (this.phase === "after" && this.t > .55) {
+      if (this.running) this.newCut(); else this.phase = "cut";
+    }
+  }
+  draw(ctx) {
+    const { W, H } = this;
+    drawMiniCourt(ctx, this, W, H);
+    const h = SPOTS[this.side || "LW"];
+    // teammates standing in their spots (not part of the play)
+    ["LC", "RC", this.side === "LW" ? "RW" : "LW"].forEach((k, i) => drawMate(ctx, this, SPOTS[k].x, SPOTS[k].y, [4, 5, 3][i]));
+    drawMate(ctx, this, h.x, h.y, 2, this.phase === "cut" ? "#ffc800" : null);
+    if (this.cutter) {
+      drawDefender(ctx, this, this.def.x, this.def.y);
+      const open = this.openNow && (this.phase === "cut" || this.phase === "pass");
+      drawMate(ctx, this, this.cutter.x, this.cutter.y, 1, open ? "#58cc02" : null);
+      if (open) drawText(ctx, "OPEN!", ...this.P(this.cutter.x, this.cutter.y + 9), Math.max(18, 4.6 * this.s), "#58cc02"); // below him, so the beaten defender stays in sight
+    }
+    if (this.ball) { const [bx, by] = this.P(this.ball.x, this.ball.y); drawBall(ctx, bx, by, 2.2 * this.s, this.clock * 3); }
+    else if (this.phase === "cut") { const [bx, by] = this.P(h.x + 3, h.y + 2.6); drawBall(ctx, bx, by, 2.2 * this.s, 0); }
+    drawText(ctx, "Tap to pass when he's in front!", W / 2, this.oy + 100 * this.s + 34, 20, "#fff");
+    this.fx.draw(ctx);
+  }
+}
+
 // A rough bell curve, for CPU timing mistakes.
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / .5;
 

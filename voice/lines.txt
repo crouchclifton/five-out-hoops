@@ -60,11 +60,14 @@ Corner Smarts
 Corner Three
 Corner smarts! Pass up to the wing, cut, and come back to the same corner.
 Corner to wing pass? The passer cuts, then comes right back to the same corner.
+Corner to wing!
 Corners are down low, by the end line. Stay wide!
 Corners are way down low, on the sides by the end line.
 Cruz Ironside
 Cut hard to the hoop. Your teammate might pass it right back!
 Cut in Front
+Cutter Catch
+Cutter Catch! Your teammate is cutting to the hoop. Tap to pass when he gets in front of his defender. Too soon and it gets stolen!
 Cutters, hands up! Be ready to catch the pass back.
 Dante Swoop
 Deacon Deepwater
@@ -166,6 +169,7 @@ Get 5 right in a row
 Get every answer right the first time for a perfect lesson!
 Give & Go
 Give and go!
+Give and go! +2
 Give and go! Pass, cut in front of your defender, and get the ball right back.
 Glass Man
 Go Eagles!
@@ -324,6 +328,7 @@ No names needed. Your player is saved only on this phone.
 No-Look Pass
 Now watch the cutter. Did he step away and get in front?
 Now you show me! Tap where the passer should go.
+ON FIRE x2
 ON FIRE x3
 ON FIRE!
 OPEN!
@@ -335,6 +340,7 @@ One spot is still empty. Where does number 2 go? Tap the empty spot.
 One spot is still empty. Where does number 3 go? Tap the empty spot.
 One spot is still empty. Where does number 4 go? Tap the empty spot.
 One spot is still empty. Where does number 5 go? Tap the empty spot.
+Oops!
 Open on the wing? Be ready to catch and shoot!
 Open!
 Otis Outlet
@@ -407,6 +413,8 @@ Rio Rainmaker
 Rocco Rebound
 Rocket Skyler
 Rocket attacks the hoop when the defender is not in the way. If it's open, drive!
+Rotation Rush
+Rotation Rush! Watch the pass and the cut, then tap the spot where the passer ends up. Get as many as you can!
 Rule number 1: Attack the basket when you can!
 Rule number 1: Attack the basket! If your defender is NOT between you and the hoop, drive and score!
 Rule number 1: look at the hoop first. Attack the basket when you can!
@@ -445,6 +453,7 @@ Stay wide! A crowded court is easy to guard.
 Step away first, then cut in front of your defender.
 Step away, then cut in front. That's how you get open!
 Step-Back Three
+Stolen!
 Sure Hands
 Sweet!
 Swing the ball from side to side to make the defense run.
@@ -464,6 +473,7 @@ Tap an empty spot for number 4.
 Tap an empty spot for number 5.
 Tap the TOP spot.
 Tap the card to flip it
+Tap to pass when he's in front!
 That spot is inside the line. 5-Out spots are all OUTSIDE the 3-point line.
 That teammate has the ball! Pick the one right next to the empty spot.
 That's inside the line. Pick a spot OUTSIDE the 3-point line.
@@ -498,11 +508,13 @@ Tip off!
 Titan Brooks
 Toby Tiptoe
 Too far! A defender could steal that. Pass to the teammate right next to you.
+Too late!
 Too long!
 Too short!
 Too slow!
 Too strong!
 Top to wing pass? Cut to the hoop, then run to the opposite corner.
+Top to wing!
 Top to wing, wing to corner: opposite corner. Corner to wing: same corner. Wing to top: same side corner!
 Triple Threat
 Two-Foot Jump
@@ -526,15 +538,22 @@ When you catch the ball, face the hoop. You can shoot, pass or drive.
 Where Do I Go?
 Where do I go?
 Where does number 1 end up? Tap the spot.
+Where does number 1 go? Tap it!
 Where does number 2 end up? Tap the spot.
+Where does number 2 go? Tap it!
 Where does number 3 end up? Tap the spot.
+Where does number 3 go? Tap it!
 Where does number 4 end up? Tap the spot.
+Where does number 4 go? Tap it!
 Where does number 5 end up? Tap the spot.
+Where does number 5 go? Tap it!
 Who's playing? Tap your player!
 Win a silver or gold medal
 Windmill Layup
 Wing to corner pass? Cut to the hoop, then run to the opposite corner.
+Wing to corner!
 Wing to top pass? The passer cuts, then fills the corner on the same side.
+Wing to top!
 Wings are on the sides, like a bird's wings!
 XP earned
 Yes!
