@@ -188,7 +188,7 @@ Here's a cutting secret! Take a step away first. Your defender follows you. Then
 Hi! I'm Coach Bounce! Welcome to the Eagles! Tap the glowing circle to start your first lesson!
 High Arc
 Hoop Wall
-Hoop Wall! Hold to power up and let go when the meter is level with a row of hoops. Slide your finger to move. Higher hoops score more!
+Hoop Wall! The hoops slide by. Hold to power up and let go when the meter is level with a row. A green hoop means it will go in. Higher hoops score more!
 Hustle Play
 If you quit now, you'll lose your progress in this lesson.
 If you run straight in, your defender stays with you. Take a step away first, then cut in front!

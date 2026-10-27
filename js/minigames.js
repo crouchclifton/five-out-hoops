@@ -24,8 +24,8 @@ const GAMES = {
   },
   hoopwall: {
     title: "Hoop Wall", glyph: "hoopwall",
-    intro: "Hoop Wall! <b>Hold</b> to power up and <b>let go</b> when the meter is level with a row of hoops. Slide your finger to move. Higher hoops score more!",
-    tiers: [14, 22, 30], unit: "points", make: () => new HoopWall(),
+    intro: "Hoop Wall! The hoops slide by. <b>Hold</b> to power up and <b>let go</b> when the meter is level with a row. A <b>green</b> hoop means it will go in. Higher hoops score more!",
+    tiers: [13, 20, 27], unit: "points", make: () => new HoopWall(),
   },
   dribble: {
     title: "Dribble Dash", glyph: "dribble",
@@ -515,18 +515,27 @@ class DribbleDash {
 }
 
 
-// ---------- Hoop Wall: hold to power up, let go to shoot at a wall of hoops ----------
-// Inspired by a Mario Party mini game Clifton sent (two screenshots, October 2026).
-// Three rows on a brick wall: bottom +1, a sliding gold middle row +2, top +3.
+// ---------- Hoop Wall: hold to power up, let go to shoot at a wall of moving hoops ----------
+// Inspired by a Mario Party mini game Clifton sent (screenshots and a clip, October 2026).
+// Three rows of hoops slide across a brick wall: bottom +1, a gold middle row +2,
+// top +3. Every player stays in their own spot; the only control is hold and let go
+// (Clifton, October 27, 2026: moving AND watching the meter was too much for kids).
 // You and three CPU players (made-up kids from the cards) race for 30 seconds.
-const HW_ROWS = [{ pts: 3, n: 4, rim: "#ea580c" }, { pts: 2, n: 5, rim: "#f5b800", slide: true }, { pts: 1, n: 4, rim: "#ea580c" }];
+// speed: how fast the row slides, in screen widths a second (minus = to the left).
+const HW_ROWS = [
+  { pts: 3, n: 5, rim: "#ea580c", speed: .13 },
+  { pts: 2, n: 5, rim: "#f5b800", speed: -.1, gold: true },
+  { pts: 1, n: 5, rim: "#ea580c", speed: .07 },
+];
 const HW_TOL = 0.075;           // how close to a row's level the meter has to be
 const HW_FILL = 1.0;            // meter fills bottom to top in 1 second, then drains
-// CPU skill: how far off their timing and aim are, and which rows they go for.
+const HW_FLY = .55;             // seconds from letting go to the ball reaching its row
+// CPU skill: how far off their timing is, which rows they go for, and whether they
+// wait for a hoop to line up before shooting.
 const HW_CPU = [
-  { name: "Sam", card: "sam", color: "#ef4444", sigma: .085, aim: .3, rows: [.15, .3, .55], predict: false },
-  { name: "Zeke", card: "zeke", color: "#22c55e", sigma: .06, aim: .2, rows: [.3, .35, .35], predict: false },
-  { name: "Rex", card: "rex", color: "#a855f7", sigma: .07, aim: .16, rows: [.35, .35, .3], predict: true },
+  { name: "Sam", card: "sam", color: "#ef4444", sigma: .085, rows: [.15, .3, .55], predict: false },
+  { name: "Zeke", card: "zeke", color: "#22c55e", sigma: .09, rows: [.25, .35, .4], predict: true },
+  { name: "Rex", card: "rex", color: "#a855f7", sigma: .075, rows: [.35, .35, .3], predict: true },
 ];
 function hwImage(look, pose) {
   // The card art's orange ball comes out: each shooter holds a ball in their own color.
@@ -550,16 +559,16 @@ function drawTintBall(ctx, x, y, r, color, spin = 0) {
 }
 class HoopWall {
   constructor() {
-    this.time = 30; this.clock = 0; this.slide = 0; this.fx = new Floaters(); this.sparks = []; this.shake = 0;
+    this.time = 30; this.clock = 0; this.slides = HW_ROWS.map((_, r) => r * 37); this.fx = new Floaters(); this.sparks = []; this.shake = 0; this.wob = [];
     const me = typeof currentPlayer === "function" && currentPlayer();
     const myLook = { ...(me && me.look ? me.look : { skin: 2, hair: "short", hc: "#111827", num: 1 }), jersey: "#1e3a8a", trim: "#f97316" };
     const cpus = HW_CPU.map(c => ({ ...c, look: { ...cardById(c.card).look, jersey: c.color, trim: "#ffffff" } }));
     this.players = [
       { name: "You", you: true, color: "#f97316", look: myLook },
       ...cpus,
-    ].map(p => ({ ...p, score: 0, x: 0, tx: 0, p: 0, dir: 1, charging: false, ball: null, cool: 0, jump: 0,
+    ].map(p => ({ ...p, score: 0, x: 0, p: 0, dir: 1, charging: false, ball: null, cool: 0, jump: 0,
       state: "think", wait: .4 + Math.random() * .8, img: { hold: hwImage(p.look, "hold"), shoot: hwImage(p.look, "shoot") } }));
-    // You start second from the left, between two CPU players.
+    // You stand second from the left, between two CPU players.
     [this.players[1], this.players[0]] = [this.players[0], this.players[1]];
   }
   get me() { return this.players.find(p => p.you); }
@@ -575,7 +584,8 @@ class HoopWall {
     this.sh = Math.min(H * .19, 150);
     this.launchY = this.feetY - this.sh * .78;
     this.topY = this.wallTop - 18;
-    if (!this.placed) { this.placed = true; this.players.forEach((p, i) => { p.x = p.tx = this.pw * (.14 + i * .24); }); }
+    // Each player has a spot of their own.
+    this.players.forEach((p, i) => { p.x = this.pw * (.14 + i * .24); });
     this.bricks = null; // redrawn at the new size
   }
   start() { this.running = true; }
@@ -583,22 +593,29 @@ class HoopWall {
   // Meter level -> how high the ball goes, and the level each row needs.
   yOf(p) { return this.launchY - p * (this.launchY - this.topY); }
   pRow(r) { return (this.launchY - (this.rowY[r] - this.hw * .3)) / (this.launchY - this.topY); }
-  hoopsIn(r) {
-    const row = HW_ROWS[r], W = this.pw;
-    if (!row.slide) return Array.from({ length: row.n }, (_, i) => W * (i + .5) / row.n);
-    const sp = W / 4, loop = sp * row.n;
-    return Array.from({ length: row.n }, (_, i) => ((i * sp + this.slide) % loop + loop) % loop - sp / 2);
+  // Where row r's hoops are now, or `ahead` seconds from now. Each row loops around.
+  hoopsIn(r, ahead = 0) {
+    const row = HW_ROWS[r], sp = this.pw / 4, loop = sp * row.n;
+    const off = this.slides[r] + ahead * row.speed * this.W;
+    return Array.from({ length: row.n }, (_, i) => ((i * sp + off) % loop + loop) % loop - sp / 2);
   }
-  slideAt(t) { return this.slide + t * this.W * .11; }
-  // Pointer: press to start charging, slide to move, let go to shoot.
-  down(x) { const m = this.me; if (!this.running || m.cool > 0 || m.ball) return; m.tx = x; m.charging = true; m.p = 0; m.dir = 1; }
-  move(x) { if (this.me.charging) this.me.tx = x; }
+  // The hoop in row r closest to x, `ahead` seconds from now: [index, distance].
+  nearest(r, x, ahead = 0) {
+    let best = [0, Infinity];
+    this.hoopsIn(r, ahead).forEach((hx, i) => { const d = Math.abs(hx - x); if (d < best[1]) best = [i, d]; });
+    return best;
+  }
+  rowFor(p) {
+    let row = null, best = 1;
+    HW_ROWS.forEach((_, r) => { const d = Math.abs(p - this.pRow(r)); if (d <= HW_TOL && d < best) { best = d; row = r; } });
+    return row;
+  }
+  // Pointer: press anywhere to start charging, let go to shoot. No moving.
+  down() { const m = this.me; if (!this.running || m.cool > 0 || m.ball) return; m.charging = true; m.p = 0; m.dir = 1; }
   up() { const m = this.me; if (m.charging) this.shoot(m); }
   shoot(pl) {
     pl.charging = false; pl.jump = 1;
-    let row = null, best = 1;
-    HW_ROWS.forEach((_, r) => { const d = Math.abs(pl.p - this.pRow(r)); if (d <= HW_TOL && d < best) { best = d; row = r; } });
-    pl.ball = { x: pl.x, y: this.launchY, t: 0, row, p: pl.p, phase: "up", spin: 0, r: this.sh * .11 };
+    pl.ball = { x: pl.x, y: this.launchY, t: 0, row: this.rowFor(pl.p), p: pl.p, phase: "up", spin: 0, r: this.sh * .11 };
     pl.cool = .45;
     sfx("pass");
   }
@@ -606,7 +623,7 @@ class HoopWall {
     const b = pl.ball;
     b.spin += dt * 9;
     if (b.phase === "up") {
-      b.t += dt / .55;
+      b.t += dt / HW_FLY;
       const k = Math.min(1, b.t), apex = b.row !== null ? this.rowY[b.row] - this.hw * .3 : this.yOf(b.p);
       b.y = this.launchY + (apex - this.launchY) * Math.sin(k * Math.PI / 2);
       b.r = this.sh * .11 * (1 - .3 * k);
@@ -618,32 +635,29 @@ class HoopWall {
         sfx("bounce");
         return;
       }
-      const hoops = this.hoopsIn(b.row);
-      let hx = null, off = Infinity;
-      for (const x of hoops) if (Math.abs(x - b.x) < off) { off = Math.abs(x - b.x); hx = x; }
+      const [i, off] = this.nearest(b.row, b.x), hx = this.hoopsIn(b.row)[i];
       if (off < this.hw * .42) {
         const pts = HW_ROWS[b.row].pts;
         pl.score += pts;
-        b.phase = "in"; b.hx = hx; b.ht = 0;
-        this.wobble(b.row, hx, 1);
+        b.phase = "in"; b.hi = i; b.ht = 0;
+        this.wob.push({ r: b.row, i, t: 0, k: 1, color: pl.color });
         if (pl.you) {
           sfx(pts === 3 ? "combo" : "swish");
           this.fx.add(off < this.hw * .12 ? `SWISH! +${pts}` : "+" + pts, hx, this.rowY[b.row] - this.hw * .7, pts === 3 ? "#ffc800" : "#fff", pts === 3 ? 38 : 32);
-          this.burst(hx, this.rowY[b.row], pts === 3 ? 18 : 10, pts === 2 ? "#f5b800" : pl.color);
+          this.burst(hx, this.rowY[b.row], pts === 3 ? 18 : 10, HW_ROWS[b.row].gold ? "#f5b800" : pl.color);
           if (pts === 3) this.shake = .25;
         } else {
           this.fx.add("+" + pts, hx, this.rowY[b.row] - this.hw * .55, pl.color, 22);
         }
       } else {
         b.phase = "fall"; b.vx = (b.x < hx ? -1 : 1) * (90 + Math.random() * 80); b.vy = -140;
-        this.wobble(b.row, hx, .6);
+        this.wob.push({ r: b.row, i, t: 0, k: .6 });
         if (pl.you) { sfx("clank"); this.fx.add("Clank!", b.x, b.y - 24, "#fca5a5", 24); }
       }
     } else if (b.phase === "in") {
+      // The ball rides down through its hoop as the hoop slides.
       b.ht += dt / .3;
-      const r = HW_ROWS[b.row];
-      if (r.slide) b.hx = this.hoopsIn(b.row).reduce((a, x) => Math.abs(x - b.hx) < Math.abs(a - b.hx) ? x : a);
-      b.x += (b.hx - b.x) * Math.min(1, dt * 18);
+      b.x = this.hoopsIn(b.row)[b.hi];
       b.y = this.rowY[b.row] - this.hw * .3 + Math.min(1, b.ht) * this.hw * .6;
       if (b.ht >= 1.6) pl.ball = null;
     } else {
@@ -651,46 +665,30 @@ class HoopWall {
       if (b.y > this.feetY) pl.ball = null;
     }
   }
-  wobble(r, x, k) { (this.wob = this.wob || []).push({ r, x, t: 0, k }); }
   burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 160;
       this.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, t: 0, color: i % 3 ? color : "#fff" });
     }
   }
-  // A CPU player: pick a hoop, walk under it, hold, and let go a little early or late.
+  // A CPU player: pick a row, wait for a hoop to come along (the better ones do),
+  // hold, and let go a little early or late.
   thinkCPU(pl, dt) {
     if (pl.state === "think") {
       pl.wait -= dt;
-      if (pl.wait > 0 || pl.ball || !this.running) return;
+      if (pl.wait > 0 || pl.ball || pl.cool > 0 || !this.running) return;
       let n = Math.random(), r = 0;
       while (r < 2 && (n -= pl.rows[r]) > 0) r++;
       pl.row = r;
-      // Skip hoops another shooter is already standing under, so nobody crowds you.
-      const others = this.players.filter(o => o !== pl).map(o => o.tx);
-      let hoops = this.hoopsIn(r).filter(x => x > 20 && x < this.pw - 20);
-      const free = hoops.filter(x => others.every(o => Math.abs(o - x) > this.hw * .8));
-      if (free.length) hoops = free;
-      const near = hoops.sort((a, b) => Math.abs(a - pl.x) - Math.abs(b - pl.x)).slice(0, 2);
-      pl.hoopX = pick(near);
-      pl.miss = (Math.random() * 2 - 1) * this.hw * pl.aim;
       pl.want = Math.min(.98, this.pRow(r) + gauss() * pl.sigma);
-      pl.tx = pl.hoopX + pl.miss;
-      pl.state = "walk";
-    } else if (pl.state === "walk") {
-      pl.walkT = (pl.walkT || 0) + dt;
-      if (HW_ROWS[pl.row].slide) {
-        // The good CPU leads the moving hoop; the others aim where it is now. A hoop
-        // sliding off the edge is swapped for the next one coming in, so the target
-        // is always somewhere they can stand.
-        const lead = pl.predict ? (pl.want / HW_FILL + .55) * this.W * .11 : 0;
-        const ok = this.hoopsIn(pl.row).filter(x => x + lead > 30 && x + lead < this.pw - 20);
-        const h = ok.reduce((a, x) => Math.abs(x - pl.hoopX) < Math.abs(a - pl.hoopX) ? x : a, ok[0]);
-        pl.hoopX = h; pl.tx = h + lead + pl.miss;
-      }
-      pl.tx = Math.max(24, Math.min(this.pw - 10, pl.tx));
-      if (Math.abs(pl.x - pl.tx) < 6 && this.running) { pl.state = "charge"; pl.charging = true; pl.p = 0; pl.dir = 1; pl.walkT = 0; }
-      else if (pl.walkT > 3) { pl.state = "think"; pl.wait = .2; pl.walkT = 0; } // never get stuck
+      pl.state = "wait"; pl.waitT = 0;
+    } else if (pl.state === "wait") {
+      // Shoot when a hoop will be overhead by the time the ball gets there.
+      pl.waitT += dt;
+      const ahead = pl.want / HW_FILL + HW_FLY;
+      const lined = this.nearest(pl.row, pl.x, ahead)[1] < this.hw * .3;
+      if (!this.running) { pl.state = "think"; return; }
+      if (!pl.predict || lined || pl.waitT > 2.5) { pl.state = "charge"; pl.charging = true; pl.p = 0; pl.dir = 1; }
     } else if (pl.state === "charge") {
       if (!this.running) { pl.charging = false; pl.state = "think"; return; }
       if (pl.p >= pl.want || pl.dir < 0) { this.shoot(pl); pl.state = "think"; pl.wait = .25 + Math.random() * .5; }
@@ -698,21 +696,18 @@ class HoopWall {
   }
   update(dt) {
     this.clock += dt;
-    this.slide = this.slideAt(dt) ; // gold row drifts to the right and wraps around
+    HW_ROWS.forEach((row, r) => { this.slides[r] += row.speed * this.W * dt; });
     this.fx.update(dt);
     this.shake = Math.max(0, this.shake - dt);
     this.sparks.forEach(s => { s.t += dt; s.vy += 500 * dt; s.x += s.vx * dt; s.y += s.vy * dt; });
     this.sparks = this.sparks.filter(s => s.t < .7);
-    if (this.wob) { this.wob.forEach(w => w.t += dt); this.wob = this.wob.filter(w => w.t < .6); }
+    this.wob.forEach(w => w.t += dt); this.wob = this.wob.filter(w => w.t < .6);
     if (this.running) {
       this.time -= dt;
       if (this.time <= 0) { this.time = 0; this.running = false; this.players.forEach(p => p.charging = false); }
     }
     for (const pl of this.players) {
       if (!pl.you) this.thinkCPU(pl, dt);
-      const walk = this.W * (pl.you ? 2.2 : .5) * dt;
-      pl.tx = Math.max(24, Math.min(this.pw - 10, pl.tx));
-      pl.x += Math.max(-walk, Math.min(walk, pl.tx - pl.x));
       if (pl.charging) {
         pl.p += pl.dir * dt / HW_FILL;
         if (pl.p >= 1) { pl.p = 1; pl.dir = -1; }
@@ -762,26 +757,29 @@ class HoopWall {
     if (!pl.ball && pl.cool === 0) drawTintBall(ctx, pl.x + w * .2, this.feetY - h * (.5 - crouch) - lift, this.sh * .1, pl.color, 0);
     if (pl.you) drawText(ctx, "YOU", pl.x, this.feetY - h * .84 - lift, 18, "#ffc800");
   }
-  drawHoopAt(ctx, x, y, r, part) {
+  // glow: the hoop your ball will reach if you let go now (green), or a hoop that just scored (scorer's color).
+  drawHoopAt(ctx, x, y, r, i, part, glow) {
     const w = this.hw, rx = w / 2, ry = w * .14;
-    const wob = (this.wob || []).filter(o => o.r === r && Math.abs(o.x - x) < 2).reduce((a, o) => a + Math.sin(o.t * 40) * (1 - o.t / .6) * 4 * o.k, 0);
+    const ws = this.wob.filter(o => o.r === r && o.i === i);
+    const wob = ws.reduce((a, o) => a + Math.sin(o.t * 40) * (1 - o.t / .6) * 4 * o.k, 0);
+    const lit = glow || (ws.find(o => o.color) || {}).color;
     const rim = HW_ROWS[r].rim;
     if (part === "back") {
       const bw = w * 1.25, bh = w * .8;
-      ctx.fillStyle = "#f8fafc"; ctx.strokeStyle = "#334155"; ctx.lineWidth = 3;
+      ctx.fillStyle = "#f8fafc"; ctx.strokeStyle = lit || "#334155"; ctx.lineWidth = lit ? 5 : 3;
       ctx.beginPath(); ctx.roundRect(x - bw / 2, y - bh + w * .05, bw, bh, 9); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = "#4f46e5"; ctx.lineWidth = 2.5; ctx.strokeRect(x - w * .27, y - w * .45, w * .54, w * .38);
       ctx.strokeStyle = rim; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.ellipse(x, y + wob, rx, ry, 0, Math.PI, Math.PI * 2); ctx.stroke();
     } else {
-      ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 1.6;
+      ctx.strokeStyle = lit || "rgba(255,255,255,.9)"; ctx.lineWidth = lit ? 2.4 : 1.6;
       const nb = w * .5, depth = w * .5;
-      for (let i = 0; i <= 6; i++) {
-        const t = i / 6; ctx.beginPath(); ctx.moveTo(x - rx + t * w, y + wob); ctx.lineTo(x - nb / 2 + t * nb + wob, y + depth); ctx.stroke();
+      for (let k = 0; k <= 6; k++) {
+        const t = k / 6; ctx.beginPath(); ctx.moveTo(x - rx + t * w, y + wob); ctx.lineTo(x - nb / 2 + t * nb + wob, y + depth); ctx.stroke();
       }
       ctx.beginPath(); ctx.ellipse(x, y + depth * .5, rx * .75, ry * .7, 0, 0, Math.PI); ctx.stroke();
       ctx.strokeStyle = rim; ctx.lineWidth = 4.5;
-      if (HW_ROWS[r].slide) { ctx.shadowColor = "#ffe066"; ctx.shadowBlur = 8; }
+      if (HW_ROWS[r].gold || lit) { ctx.shadowColor = lit || "#ffe066"; ctx.shadowBlur = lit ? 14 : 8; }
       ctx.beginPath(); ctx.ellipse(x, y + wob, rx, ry, 0, 0, Math.PI); ctx.stroke();
       ctx.shadowBlur = 0;
     }
@@ -803,20 +801,27 @@ class HoopWall {
     ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(W * .3, this.floorY + 10); ctx.lineTo(W * .26, H); ctx.moveTo(W * .7, this.floorY + 10); ctx.lineTo(W * .74, H); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(W / 2, this.floorY + 10, W * .46, (H - this.floorY) * .75, 0, 0, Math.PI); ctx.stroke();
-    // aim line: where your ball will go if you let go now
+    // While you hold: the row your meter points at, and whether a hoop there will
+    // be over you when the ball arrives (that hoop glows green).
     const m = this.me;
+    let target = null;
     if (m.charging) {
-      const y = this.yOf(m.p), on = HW_ROWS.some((_, r) => Math.abs(m.p - this.pRow(r)) <= HW_TOL);
-      ctx.setLineDash([4, 7]); ctx.strokeStyle = on ? "#58cc02" : "rgba(255,255,255,.8)"; ctx.lineWidth = 3;
+      const row = this.rowFor(m.p), y = this.yOf(m.p);
+      if (row !== null) {
+        const [i, d] = this.nearest(row, m.x, HW_FLY);
+        if (d < this.hw * .42) target = { r: row, i };
+      }
+      ctx.setLineDash([4, 7]); ctx.strokeStyle = target ? "#58cc02" : "rgba(255,255,255,.8)"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(m.x, this.launchY); ctx.lineTo(m.x, y); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = on ? "#58cc02" : "#fff"; ctx.beginPath(); ctx.arc(m.x, y, 6, 0, 7); ctx.fill();
+      ctx.fillStyle = target ? "#58cc02" : "#fff"; ctx.beginPath(); ctx.arc(m.x, y, 6, 0, 7); ctx.fill();
     }
+    const glowOf = (r, i) => target && target.r === r && target.i === i ? "#58cc02" : null;
     // hoops (back), balls going in, hoop fronts, other balls
-    HW_ROWS.forEach((_, r) => this.hoopsIn(r).forEach(x => this.drawHoopAt(ctx, x, this.rowY[r], r, "back")));
+    HW_ROWS.forEach((_, r) => this.hoopsIn(r).forEach((x, i) => this.drawHoopAt(ctx, x, this.rowY[r], r, i, "back", glowOf(r, i))));
     for (const pl of this.players) if (pl.ball && pl.ball.phase === "in") drawTintBall(ctx, pl.ball.x, pl.ball.y, pl.ball.r, pl.color, pl.ball.spin);
-    HW_ROWS.forEach((_, r) => this.hoopsIn(r).forEach(x => this.drawHoopAt(ctx, x, this.rowY[r], r, "front")));
+    HW_ROWS.forEach((_, r) => this.hoopsIn(r).forEach((x, i) => this.drawHoopAt(ctx, x, this.rowY[r], r, i, "front", glowOf(r, i))));
     for (const pl of this.players) if (pl.ball && pl.ball.phase !== "in") drawTintBall(ctx, pl.ball.x, pl.ball.y, pl.ball.r, pl.color, pl.ball.spin);
-    // shooters, back to front
+    // shooters, you in front
     this.players.slice().sort((a, b) => (a.you ? 1 : 0) - (b.you ? 1 : 0)).forEach(pl => this.drawShooter(ctx, pl));
     for (const s of this.sparks) { ctx.globalAlpha = 1 - s.t / .7; ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 7); ctx.fill(); }
     ctx.globalAlpha = 1;
@@ -825,7 +830,7 @@ class HoopWall {
     ctx.fillStyle = "rgba(15,23,42,.75)"; ctx.beginPath(); ctx.roundRect(mx - 11, top - 6, 22, bot - top + 12, 11); ctx.fill();
     HW_ROWS.forEach((row, r) => {
       const a = this.yOf(this.pRow(r) + HW_TOL), b = this.yOf(this.pRow(r) - HW_TOL);
-      ctx.fillStyle = row.slide ? "#f5b800" : "#58cc02"; ctx.fillRect(mx - 7, a, 14, b - a);
+      ctx.fillStyle = row.gold ? "#f5b800" : "#58cc02"; ctx.fillRect(mx - 7, a, 14, b - a);
       drawText(ctx, "+" + row.pts, mx, (a + b) / 2, 13, "#fff");
     });
     if (m.charging) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#1f2937"; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(mx - 15, this.yOf(m.p) - 4, 30, 8, 4); ctx.fill(); ctx.stroke(); }
