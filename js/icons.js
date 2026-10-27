@@ -61,6 +61,13 @@ const ICONS = {
   passpop: `<circle cx="9" cy="33" r="6" fill="#fff"/><circle cx="39" cy="33" r="6" fill="#fff"/><path d="M14 28q10-14 20 0" ${wht(2.6)} stroke-dasharray="1 5"/><circle cx="24" cy="18" r="6.5" fill="#fff"/><path d="M17.5 18h13M24 11.5v13" stroke="#c084fc" stroke-width="1.8"/>`,
   freethrow: `<rect x="5" y="27" width="38" height="12" rx="6" ${wht(3)}/><rect x="18" y="27" width="12" height="12" fill="#fff" opacity=".55"/><path d="M26 22v22" ${wht(3.6)}/><circle cx="24" cy="12" r="6.5" fill="#fff"/>`,
   dribble: `<circle cx="30" cy="14" r="8" fill="#fff"/><path d="M24.5 14h11M30 6v16" stroke="#c084fc" stroke-width="1.8"/><path d="M30 26v9" ${wht(3)} stroke-dasharray="2 4"/><path d="M22 41h16" ${wht(3)}/><path d="M6 12h10M4 19h10M7 26h8" ${wht(2.6)}/>`,
+  // Unit 3 and Hoop Wall
+  rotate: `<path d="M12 18a13 13 0 0 1 23-4" ${wht()}/><path d="M36 6v9h-9" ${wht()}/><path d="M36 30a13 13 0 0 1-23 4" ${wht()}/><path d="M12 42v-9h9" ${wht()}/><circle cx="24" cy="24" r="4.5" fill="#fff"/>`,
+  fake: `<circle cx="12" cy="10" r="5.5" fill="#fff"/><path d="M12 18l-5 9 13 3" ${wht()}/><path d="M20 30q4 8 15 9" ${wht()} stroke-dasharray="0.5 6"/><path d="M30 34.5l6 4.5-6.5 3" ${wht()}/>`,
+  corner: `<path d="M8 8v32h32" ${wht(3.6)}/><circle cx="16" cy="31" r="6" fill="#fff"/><path d="M21 26l9-12" ${wht()}/><path d="M24 14l6-.5.5 6" ${wht()}/>`,
+  coach: `<rect x="9" y="7" width="26" height="34" rx="3" ${wht(3)}/><path d="M15 17l5 5M20 17l-5 5" ${wht(2.6)}/><path d="M16 33q4-8 12-9" ${wht(2.4)} stroke-dasharray="1 4"/><circle cx="34" cy="34" r="7" fill="none" stroke="#fff" stroke-width="3.2"/><path d="M39 39l5 5" ${wht(3.6)}/>`,
+  zap: `<circle cx="24" cy="24" r="18" ${wht(3)}/><path d="M27 9L15 27h8l-3 13 13-19h-8z" fill="#fff"/>`,
+  hoopwall: `<rect x="4" y="5" width="40" height="38" rx="3" ${wht(2.6)}/><path d="M4 18h40M4 31h40M17 5v13M31 18v13M17 31v12" stroke="#fff" stroke-width="1.4" opacity=".55"/>${[[12, 14], [34, 14], [24, 27], [12, 40], [34, 40]].map(([x, y]) => `<ellipse cx="${x}" cy="${y - 2}" rx="5" ry="1.8" fill="none" stroke="#fff" stroke-width="2.6"/>`).join("")}`,
   // Little buttons inside lessons
   drive: `<path d="M27 4L12 27h10l-3 17 17-25H25z" fill="#ffc800" ${ink(2)}/>`,
   passBtn: `<circle cx="10" cy="30" r="6" fill="${NAVY}" ${ink(2)}/><circle cx="38" cy="30" r="6" fill="${NAVY}" ${ink(2)}/><path d="M15 25q9-12 18 0" fill="none" stroke="${INK}" stroke-width="2.4" stroke-dasharray="1 4.5" stroke-linecap="round"/><circle cx="24" cy="16" r="5.5" fill="${ORANGE}" ${ink(2)}/>`,

@@ -1,5 +1,5 @@
 "use strict";
-// The six lessons: court drawing, players, the 5-Out rotation, and each lesson's script.
+// The lessons: court drawing, players, the 5-Out rotation, and each lesson's script.
 
 // ---------- Court geometry (viewBox 0..100, basket at the bottom) ----------
 const HOOP = { x: 50, y: 89 };
@@ -304,6 +304,30 @@ async function driveAndScore(p) {
   await layup(p);
 }
 const cutPoint = from => ({ x: 50 + (SPOTS[from].x - 50) * 0.15, y: 78 });
+// The four kinds of pass in the video: TW (top to wing), WC, CW and WT.
+const kindOf = s => s === "T" ? "T" : s[1];
+const passType = (from, to) => kindOf(from) + kindOf(to);
+// Where the passer ends up after each kind of pass (coach notes table, video 2:24 to 6:07).
+const DEST_HINT = {
+  TW: "After a pass from the <b>top to the wing</b>, the passer goes to the <b>opposite corner</b>, away from the ball.",
+  WC: "After a pass from the <b>wing to the corner</b>, the passer goes to the <b>opposite corner</b>, away from the ball.",
+  CW: "After a pass from the <b>corner to the wing</b>, the passer comes right back to the <b>same corner</b>.",
+  WT: "After a pass from the <b>wing to the top</b>, the passer goes to the <b>corner on the same side</b>.",
+};
+// The fills after a pass, all at once with a little stagger, then the cutter.
+async function autoFill(rot, cutter) {
+  const moves = [];
+  let delay = 0;
+  for (const [a, b] of rot.fills) {
+    const f = at(a);
+    f.spot = b;
+    moves.push(sleepRaw(delay).then(() => moveTo(f, SPOTS[b].x, SPOTS[b].y)));
+    delay += 250;
+  }
+  cutter.spot = rot.dest;
+  moves.push(sleepRaw(delay).then(() => moveTo(cutter, SPOTS[rot.dest].x, SPOTS[rot.dest].y)));
+  await Promise.all(moves);
+}
 
 // Everyone back to their spot, ball to the top. Used after a basket.
 async function resetAfterScore() {
@@ -333,8 +357,22 @@ async function possession(o = {}) {
   // No drives from the corner: the baseline is like an extra defender there.
   const drive = o.drive === "open" && from[1] === "C" ? "blocked" : o.drive;
 
+  // 1a. In the corner with the defender off to the side: still pass (video 5:06,
+  // "the added defender of the baseline").
+  if (o.cornerOpen && from[1] === "C") {
+    if (hd) hd.mode = "sleep";
+    await sleep(700);
+    await askTap({
+      text: `#${holder.id} has the ball in the corner, and the defender is off to the side. <b>Drive</b> or <b>pass</b>?`,
+      zones: [{ key: "drive", x: HOOP.x, y: HOOP.y - 4, r: 7, glow: true }],
+      buttons: [{ key: "drive", label: `${icon("drive")} Drive!` }, { key: "pass", label: `${icon("passBtn")} Pass` }],
+      check: k => k === "pass" ? OK : { ok: false, msg: "Careful! In the corner, the <b>end line</b> is like an extra defender. Pass it up to the <b>wing</b>." },
+    });
+    await talk(" Smart! From the corner, we pass up to the wing.");
+    if (hd) hd.mode = "guard";
+  }
   // 1. Attack the basket?
-  if (drive) {
+  else if (drive) {
     if (hd) hd.mode = drive === "open" ? "sleep" : "guard";
     await sleep(700);
     if (o.askDrive) {
@@ -369,6 +407,8 @@ async function possession(o = {}) {
       zones: players.filter(p => p !== holder).map(p => ({ key: p.spot, x: p.x, y: p.y, glow: true })),
       check: k => legal.includes(k) ? OK : { ok: false, msg: "Too far! A defender could steal that. Pass to the teammate <b>right next to you</b>." },
     });
+  } else if (o.forceTo) {
+    to = o.forceTo;
   } else {
     let c = legal;
     if (o.preferFills) { const f = c.filter(s => rotation(from, s).fills.length); if (f.length) c = f; }
@@ -396,6 +436,21 @@ async function possession(o = {}) {
         : { ok: false, msg: "Rule #2: <b>Pass and MOVE!</b> Never stand still after you pass. Cut to the hoop!" },
     });
     holder.ring.style.display = "none";
+  }
+  // 3b. The cut secret (video 3:05): step away first so the defender follows,
+  // then cut in front of the defender.
+  if (o.askFake) {
+    await askTap({
+      text: `#${holder.id}'s defender is right there. How should #${holder.id} cut?`,
+      buttons: [{ key: "fake", label: `${icon("cutBtn")} Step away, then cut in front` }, { key: "straight", label: `${icon("stop")} Run straight in` }],
+      check: k => k === "fake" ? OK : { ok: false, msg: "If you run straight in, your defender stays with you. Take a step <b>away</b> first, then cut <b>in front</b>!" },
+    });
+  }
+  if (o.fake) {
+    const away = { x: holder.x + (holder.x - HOOP.x) * 0.16, y: holder.y + (holder.y - HOOP.y) * 0.16 };
+    if (o.narrateFake) say(`#${holder.id} steps away first...`);
+    await moveTo(holder, clamp(away).x, clamp(away).y, 26);
+    await sleep(350);
   }
   const cutter = holder;
   cutter.spot = null;
@@ -466,18 +521,18 @@ async function possession(o = {}) {
     cutter.spot = rot.dest;
     await moveTo(cutter, SPOTS[rot.dest].x, SPOTS[rot.dest].y);
   } else {
-    const line = (N || o.narrateFill) ? say(rot.fills.length ? "Everyone <b>fills the open spot</b> next to them!" : `#${cutter.id} comes right back to the corner.`) : null;
-    const moves = [];
-    let delay = 0;
-    for (const [a, b] of rot.fills) {
-      const f = at(a);
-      f.spot = b;
-      moves.push(sleepRaw(delay).then(() => moveTo(f, SPOTS[b].x, SPOTS[b].y)));
-      delay += 250;
+    // askDest: before anyone moves, the player says where the passer ends up.
+    if (o.askDest) {
+      cutter.ring.style.display = "";
+      await askTap({
+        text: `Where does #${cutter.id} end up? Tap the spot.`,
+        zones: Object.entries(SPOTS).map(([k, s]) => ({ key: k, x: s.x, y: s.y })),
+        check: k => k === rot.dest ? OK : { ok: false, msg: DEST_HINT[passType(from, to)] },
+      });
+      cutter.ring.style.display = "none";
     }
-    cutter.spot = rot.dest;
-    moves.push(sleepRaw(delay).then(() => moveTo(cutter, SPOTS[rot.dest].x, SPOTS[rot.dest].y)));
-    await Promise.all(moves);
+    const line = (N || o.narrateFill) ? say(rot.fills.length ? "Everyone <b>fills the open spot</b> next to them!" : `#${cutter.id} comes right back to the corner.`) : null;
+    await autoFill(rot, cutter);
     if (line) await line;
     await sleep(N ? 700 : 300);
   }
@@ -497,10 +552,22 @@ const LESSONS = [
     blurb: "When a spot opens up, the teammate next to it slides over." },
   { title: "Give & Go", glyph: "givego", game: "dribble", run: lesson4,
     blurb: "Pass, cut, and look. Is the cutter open?" },
-  { title: "Attack!", glyph: "attack", game: null, run: lesson5,
+  { title: "Attack!", glyph: "attack", game: "hoopwall", run: lesson5,
     blurb: "If your defender is not in the way, drive to the hoop!" },
-  { title: "Big Game", glyph: "cup", game: null, run: lesson6,
+  { title: "Big Game", glyph: "cup", game: null, run: lesson6, legend: true,
     blurb: "Use all 3 rules. Every smart read scores a point!" },
+  // Unit 3 (October 27, 2026): review, still only the first 6:10 of the video,
+  // each part broken down further or taught a different way.
+  { title: "Where Do I Go?", glyph: "rotate", game: null, run: lesson7,
+    blurb: "Each kind of pass sends the passer to a different spot. Learn all 4!" },
+  { title: "Cut in Front", glyph: "fake", game: null, run: lesson8,
+    blurb: "Step away first, then cut in front of your defender." },
+  { title: "Corner Smarts", glyph: "corner", game: null, run: lesson9,
+    blurb: "In the corner? Pass up to the wing, then come right back." },
+  { title: "Spot the Mistake", glyph: "coach", game: null, run: lesson10,
+    blurb: "You're the coach! Watch the Eagles and catch the broken rule." },
+  { title: "Lightning Round", glyph: "zap", game: null, run: lesson11,
+    blurb: "Everything at game speed, with no spot names. Every read is a point!" },
 ];
 
 async function lesson1() {
@@ -639,6 +706,159 @@ async function lesson6() {
   readPoints = false;
   setProgress(1, 1);
   await next(`Game over! You scored <b>${points} points</b>!`, `Finish ${icon("star")}`);
+}
+
+
+// ---------- Unit 3: Practice Court ----------
+
+// The four rotations one at a time. The coach calls the pass, the player says
+// where the passer ends up. Each kind of pass comes up twice.
+async function lesson7() {
+  drawSpots(); setupFive(false);
+  await next("Every pass sends the passer to a spot. There are <b>4 kinds</b> of passes. Let's learn where you go after each one!", "Let's go!");
+  const seen = { TW: 0, WC: 0, CW: 0, WT: 0 };
+  const rounds = 8;
+  for (let i = 0; i < rounds; i++) {
+    setProgress(i, rounds);
+    const from = ball.holder.spot;
+    // The pass whose kind has come up the least, so all four get practice.
+    const options = shuffle(PASSES[from].slice());
+    options.sort((a, b) => seen[passType(from, a)] - seen[passType(from, b)]);
+    const to = options[0];
+    seen[passType(from, to)]++;
+    await possession({ forceTo: to, narratePass: true, askDest: true });
+  }
+  setProgress(1, 1);
+  await next("Top to wing, wing to corner: <b>opposite corner</b>. Corner to wing: <b>same corner</b>. Wing to top: <b>same side corner</b>!", `Finish ${icon("star")}`);
+}
+
+// The cutting secret from the video: step away, then cut in front.
+async function lesson8() {
+  drawSpots(); setupFive(true);
+  await next("Here's a cutting secret! Take a step <b>away</b> first. Your defender follows you. Then cut <b>in front</b> of your defender!", "Let's go!");
+  // Two rounds that teach it, then reads: did the cutter step away and get in front?
+  const plan = [true, true].concat(shuffle([true, false, true, false]));
+  for (let i = 0; i < plan.length; i++) {
+    setProgress(i, plan.length);
+    while (ball.holder.spot[1] === "C") await possession({ narratePass: true, narrateFill: true, hideZ: true });
+    if (i === 2) await talk("Now watch the cutter. Did he step away and get <b>in front</b>?");
+    await possession({ askPass: true, askFake: i < 2, fake: plan[i], narrateFake: i >= 2 && plan[i], giveGo: plan[i], askGiveGo: true, hideZ: i >= 2 });
+  }
+  setProgress(1, 1);
+  await next("Step away, then cut in front. That's how you get open!", `Finish ${icon("star")}`);
+}
+
+// Corners: pass up (not drive), and after a corner to wing pass, come back.
+async function lesson9() {
+  drawSpots(); setupFive(true);
+  await next("Ball in the corner? The <b>end line</b> is like an extra defender. So pass it up to the wing, cut, and come right back!", "Let's go!");
+  const rounds = 4;
+  for (let i = 0; i < rounds; i++) {
+    setProgress(i, rounds);
+    // Move the ball toward a corner: top to a wing, wing to its corner.
+    while (ball.holder.spot[1] !== "C") {
+      const from = ball.holder.spot;
+      const to = from === "T" ? pick(PASSES.T) : from[0] + "C";
+      await possession({ forceTo: to, narratePass: true, narrateFill: true });
+    }
+    await possession({ cornerOpen: true, askPass: true, askDest: true });
+  }
+  setProgress(1, 1);
+  await next("Corner smarts! Pass up to the wing, cut, and come back to the <b>same corner</b>.", `Finish ${icon("star")}`);
+}
+
+// Be the coach: one Eagle breaks a rule (or nobody does). Which rule was it?
+const RULE_BUTTONS = [
+  { key: "r1", label: `${icon("drive")} Rule #1: Attack` },
+  { key: "r2", label: `${icon("cutBtn")} Rule #2: Pass and move` },
+  { key: "r3", label: `${icon("fill")} Rule #3: Fill the spot` },
+  { key: "ok", label: `${icon("check")} No mistake!`, green: true },
+];
+async function mistakeRound(kind) {
+  // Nothing to fill after a corner pass, and no drives from the corner, so start
+  // these from the top or a wing.
+  while (ball.holder.spot[1] === "C") await possession({ narratePass: true, narrateFill: true });
+  const holder = ball.holder, from = holder.spot, hd = defOf(holder);
+  const choices = PASSES[from].filter(s => rotation(from, s).fills.length);
+  const to = pick(choices.length ? choices : PASSES[from]);
+  const rot = rotation(from, to);
+  if (kind === "noattack") { hd.mode = "sleep"; await sleep(1100); }
+  await passBall(at(to));
+  if (hd) hd.mode = "guard";
+  let mark = null;
+  if (kind === "stand") {
+    await sleep(1600);
+  } else {
+    holder.spot = null;
+    const cp = cutPoint(from);
+    await moveTo(holder, cp.x, cp.y, 40);
+    if (kind === "nofill") { mark = emptyMarker(from); await sleep(1400); }
+    else await autoFill(rot, holder);
+  }
+  const want = { noattack: "r1", stand: "r2", nofill: "r3", good: "ok" }[kind];
+  const hint = {
+    noattack: `Look back at #${holder.id} with the ball. Was the defender <b>in the way</b>?`,
+    stand: `Look at #${holder.id} after the pass. Did he <b>move</b>?`,
+    nofill: "Look at the court. Is a spot still <b>empty</b>?",
+    good: "Everyone did their job this time. Look again!",
+  }[kind];
+  await askTap({
+    text: "You're the coach! Did the Eagles break a rule?",
+    buttons: RULE_BUTTONS,
+    check: k => k === want ? OK : { ok: false, msg: hint },
+  });
+  // Fix it, so the team is back in the 5-Out for the next round.
+  if (kind === "stand") {
+    await talk(`Right! #${holder.id} stood still. Let's fix it: pass and <b>cut</b>!`);
+    holder.spot = null;
+    const cp = cutPoint(from);
+    await moveTo(holder, cp.x, cp.y, 40);
+    await autoFill(rot, holder);
+  } else if (kind === "nofill") {
+    await talk(" Right! Nobody filled the empty spot. Let's fix it: <b>fill the spot</b>!");
+    mark.remove();
+    await autoFill(rot, holder);
+  } else if (kind === "noattack") {
+    await talk(`Right! #${holder.id}'s defender was not in the way. He should <b>attack the basket</b>!`);
+  } else {
+    await talk(" Right! Pass, cut and fill. That's the 5-Out!");
+  }
+  await sleep(300);
+}
+async function lesson10() {
+  drawSpots(); setupFive(true);
+  await next("You're the coach! Watch the Eagles. If someone breaks a rule, tap <b>which rule</b>. If they do it right, tap <b>No mistake</b>!", "Let's go!");
+  const plan = shuffle(["stand", "nofill", "noattack", "good"]).concat(shuffle(["stand", "nofill", "noattack"]).slice(0, 2));
+  for (let i = 0; i < plan.length; i++) {
+    setProgress(i, plan.length);
+    await mistakeRound(plan[i]);
+  }
+  setProgress(1, 1);
+  await next("Great coaching! You know all <b>3 rules</b>.", `Finish ${icon("star")}`);
+}
+
+// Everything mixed, faster, with the spot names hidden. Like the Big Game, every
+// read right the first time is a point.
+async function lesson11() {
+  drawSpots({ labels: false }); setupFive(true);
+  SPEED = 40;
+  await next("Lightning Round! No spot names this time, and the Eagles move <b>fast</b>. Every smart read is <b>1 point</b>!", "Tip off!");
+  readPoints = true;
+  const turns = 7;
+  for (let i = 0; i < turns; i++) {
+    setProgress(i, turns);
+    const inCorner = ball.holder.spot[1] === "C";
+    const gg = Math.random() < 0.45;
+    await possession({
+      cornerOpen: inCorner && Math.random() < 0.6,
+      drive: inCorner ? undefined : Math.random() < 0.3 ? "open" : "blocked", askDrive: true,
+      askPass: true, askCut: Math.random() < 0.4 ? "tap" : false,
+      fake: gg, giveGo: gg, askGiveGo: true, askDest: true, hideZ: true,
+    });
+  }
+  readPoints = false;
+  setProgress(1, 1);
+  await next(`Lightning Round over! You scored <b>${points} points</b>!`, `Finish ${icon("star")}`);
 }
 
 async function watchOffense() {

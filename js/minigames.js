@@ -22,6 +22,11 @@ const GAMES = {
     intro: "Free Throw Frenzy! <b>Tap</b> when the line is in the <b>green</b> zone to shoot. Ten shots!",
     tiers: [8, 15, 22], unit: "points", make: () => new FreeThrow(),
   },
+  hoopwall: {
+    title: "Hoop Wall", glyph: "hoopwall",
+    intro: "Hoop Wall! <b>Hold</b> to power up and <b>let go</b> when the meter is level with a row of hoops. Slide your finger to move. Higher hoops score more!",
+    tiers: [14, 22, 30], unit: "points", make: () => new HoopWall(),
+  },
   dribble: {
     title: "Dribble Dash", glyph: "dribble",
     intro: "Dribble Dash! Tap <b>left, right, left, right</b> as fast as you can to beat the defender to the hoop!",
@@ -509,6 +514,351 @@ class DribbleDash {
   }
 }
 
+
+// ---------- Hoop Wall: hold to power up, let go to shoot at a wall of hoops ----------
+// Inspired by a Mario Party mini game Clifton sent (two screenshots, October 2026).
+// Three rows on a brick wall: bottom +1, a sliding gold middle row +2, top +3.
+// You and three CPU players (made-up kids from the cards) race for 30 seconds.
+const HW_ROWS = [{ pts: 3, n: 4, rim: "#ea580c" }, { pts: 2, n: 5, rim: "#f5b800", slide: true }, { pts: 1, n: 4, rim: "#ea580c" }];
+const HW_TOL = 0.075;           // how close to a row's level the meter has to be
+const HW_FILL = 1.0;            // meter fills bottom to top in 1 second, then drains
+// CPU skill: how far off their timing and aim are, and which rows they go for.
+const HW_CPU = [
+  { name: "Sam", card: "sam", color: "#ef4444", sigma: .085, aim: .3, rows: [.15, .3, .55], predict: false },
+  { name: "Zeke", card: "zeke", color: "#22c55e", sigma: .06, aim: .2, rows: [.3, .35, .35], predict: false },
+  { name: "Rex", card: "rex", color: "#a855f7", sigma: .07, aim: .16, rows: [.35, .35, .3], predict: true },
+];
+function hwImage(look, pose) {
+  // The card art's orange ball comes out: each shooter holds a ball in their own color.
+  const svgText = playerSVG({ look: { ...look, pose } })
+    .replace(/<g class="pl-ball">.*?<\/g><\/g>/g, "")
+    .replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="220" ');
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+  return img;
+}
+function drawTintBall(ctx, x, y, r, color, spin = 0) {
+  const g = ctx.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r);
+  g.addColorStop(0, "#fff"); g.addColorStop(.25, color); g.addColorStop(1, color);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(spin);
+  ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = Math.max(1.2, r * .08);
+  ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.moveTo(0, -r); ctx.lineTo(0, r); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-r * 1.15, 0, r * .85, -0.9, 0.9); ctx.stroke();
+  ctx.beginPath(); ctx.arc(r * 1.15, 0, r * .85, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
+  ctx.restore();
+}
+class HoopWall {
+  constructor() {
+    this.time = 30; this.clock = 0; this.slide = 0; this.fx = new Floaters(); this.sparks = []; this.shake = 0;
+    const me = typeof currentPlayer === "function" && currentPlayer();
+    const myLook = { ...(me && me.look ? me.look : { skin: 2, hair: "short", hc: "#111827", num: 1 }), jersey: "#1e3a8a", trim: "#f97316" };
+    const cpus = HW_CPU.map(c => ({ ...c, look: { ...cardById(c.card).look, jersey: c.color, trim: "#ffffff" } }));
+    this.players = [
+      { name: "You", you: true, color: "#f97316", look: myLook },
+      ...cpus,
+    ].map(p => ({ ...p, score: 0, x: 0, tx: 0, p: 0, dir: 1, charging: false, ball: null, cool: 0, jump: 0,
+      state: "think", wait: .4 + Math.random() * .8, img: { hold: hwImage(p.look, "hold"), shoot: hwImage(p.look, "shoot") } }));
+    // You start second from the left, between two CPU players.
+    [this.players[1], this.players[0]] = [this.players[0], this.players[1]];
+  }
+  get me() { return this.players.find(p => p.you); }
+  get score() { return this.me.score; }
+  resize(W, H) {
+    this.W = W; this.H = H;
+    this.wallTop = 128; this.floorY = H * .64;
+    this.pw = W - 46; // the hoops and shooters stay left of the power meter
+    this.hw = Math.min(this.pw / 5, 70);
+    const span = this.floorY - this.wallTop;
+    this.rowY = [this.wallTop + span * .2, this.wallTop + span * .5, this.wallTop + span * .8];
+    this.feetY = H - 34;
+    this.sh = Math.min(H * .19, 150);
+    this.launchY = this.feetY - this.sh * .78;
+    this.topY = this.wallTop - 18;
+    if (!this.placed) { this.placed = true; this.players.forEach((p, i) => { p.x = p.tx = this.pw * (.14 + i * .24); }); }
+    this.bricks = null; // redrawn at the new size
+  }
+  start() { this.running = true; }
+  hud() { return [icon("ball") + this.score, icon("clock") + Math.ceil(this.time)]; }
+  // Meter level -> how high the ball goes, and the level each row needs.
+  yOf(p) { return this.launchY - p * (this.launchY - this.topY); }
+  pRow(r) { return (this.launchY - (this.rowY[r] - this.hw * .3)) / (this.launchY - this.topY); }
+  hoopsIn(r) {
+    const row = HW_ROWS[r], W = this.pw;
+    if (!row.slide) return Array.from({ length: row.n }, (_, i) => W * (i + .5) / row.n);
+    const sp = W / 4, loop = sp * row.n;
+    return Array.from({ length: row.n }, (_, i) => ((i * sp + this.slide) % loop + loop) % loop - sp / 2);
+  }
+  slideAt(t) { return this.slide + t * this.W * .11; }
+  // Pointer: press to start charging, slide to move, let go to shoot.
+  down(x) { const m = this.me; if (!this.running || m.cool > 0 || m.ball) return; m.tx = x; m.charging = true; m.p = 0; m.dir = 1; }
+  move(x) { if (this.me.charging) this.me.tx = x; }
+  up() { const m = this.me; if (m.charging) this.shoot(m); }
+  shoot(pl) {
+    pl.charging = false; pl.jump = 1;
+    let row = null, best = 1;
+    HW_ROWS.forEach((_, r) => { const d = Math.abs(pl.p - this.pRow(r)); if (d <= HW_TOL && d < best) { best = d; row = r; } });
+    pl.ball = { x: pl.x, y: this.launchY, t: 0, row, p: pl.p, phase: "up", spin: 0, r: this.sh * .11 };
+    pl.cool = .45;
+    sfx("pass");
+  }
+  updateBall(pl, dt) {
+    const b = pl.ball;
+    b.spin += dt * 9;
+    if (b.phase === "up") {
+      b.t += dt / .55;
+      const k = Math.min(1, b.t), apex = b.row !== null ? this.rowY[b.row] - this.hw * .3 : this.yOf(b.p);
+      b.y = this.launchY + (apex - this.launchY) * Math.sin(k * Math.PI / 2);
+      b.r = this.sh * .11 * (1 - .3 * k);
+      if (k < 1) return;
+      if (b.row === null) {
+        // Missed every row: off the bricks (or over the top) and back down.
+        b.phase = "fall"; b.vx = (Math.random() - .5) * 120; b.vy = 60;
+        if (pl.you) this.fx.add(b.p > this.pRow(0) ? "Too strong!" : b.p < this.pRow(2) ? "Too short!" : "In between!", b.x, b.y - 20, "#fca5a5", 24);
+        sfx("bounce");
+        return;
+      }
+      const hoops = this.hoopsIn(b.row);
+      let hx = null, off = Infinity;
+      for (const x of hoops) if (Math.abs(x - b.x) < off) { off = Math.abs(x - b.x); hx = x; }
+      if (off < this.hw * .42) {
+        const pts = HW_ROWS[b.row].pts;
+        pl.score += pts;
+        b.phase = "in"; b.hx = hx; b.ht = 0;
+        this.wobble(b.row, hx, 1);
+        if (pl.you) {
+          sfx(pts === 3 ? "combo" : "swish");
+          this.fx.add(off < this.hw * .12 ? `SWISH! +${pts}` : "+" + pts, hx, this.rowY[b.row] - this.hw * .7, pts === 3 ? "#ffc800" : "#fff", pts === 3 ? 38 : 32);
+          this.burst(hx, this.rowY[b.row], pts === 3 ? 18 : 10, pts === 2 ? "#f5b800" : pl.color);
+          if (pts === 3) this.shake = .25;
+        } else {
+          this.fx.add("+" + pts, hx, this.rowY[b.row] - this.hw * .55, pl.color, 22);
+        }
+      } else {
+        b.phase = "fall"; b.vx = (b.x < hx ? -1 : 1) * (90 + Math.random() * 80); b.vy = -140;
+        this.wobble(b.row, hx, .6);
+        if (pl.you) { sfx("clank"); this.fx.add("Clank!", b.x, b.y - 24, "#fca5a5", 24); }
+      }
+    } else if (b.phase === "in") {
+      b.ht += dt / .3;
+      const r = HW_ROWS[b.row];
+      if (r.slide) b.hx = this.hoopsIn(b.row).reduce((a, x) => Math.abs(x - b.hx) < Math.abs(a - b.hx) ? x : a);
+      b.x += (b.hx - b.x) * Math.min(1, dt * 18);
+      b.y = this.rowY[b.row] - this.hw * .3 + Math.min(1, b.ht) * this.hw * .6;
+      if (b.ht >= 1.6) pl.ball = null;
+    } else {
+      b.vy += 900 * dt; b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.y > this.feetY) pl.ball = null;
+    }
+  }
+  wobble(r, x, k) { (this.wob = this.wob || []).push({ r, x, t: 0, k }); }
+  burst(x, y, n, color) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 160;
+      this.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, t: 0, color: i % 3 ? color : "#fff" });
+    }
+  }
+  // A CPU player: pick a hoop, walk under it, hold, and let go a little early or late.
+  thinkCPU(pl, dt) {
+    if (pl.state === "think") {
+      pl.wait -= dt;
+      if (pl.wait > 0 || pl.ball || !this.running) return;
+      let n = Math.random(), r = 0;
+      while (r < 2 && (n -= pl.rows[r]) > 0) r++;
+      pl.row = r;
+      // Skip hoops another shooter is already standing under, so nobody crowds you.
+      const others = this.players.filter(o => o !== pl).map(o => o.tx);
+      let hoops = this.hoopsIn(r).filter(x => x > 20 && x < this.pw - 20);
+      const free = hoops.filter(x => others.every(o => Math.abs(o - x) > this.hw * .8));
+      if (free.length) hoops = free;
+      const near = hoops.sort((a, b) => Math.abs(a - pl.x) - Math.abs(b - pl.x)).slice(0, 2);
+      pl.hoopX = pick(near);
+      pl.miss = (Math.random() * 2 - 1) * this.hw * pl.aim;
+      pl.want = Math.min(.98, this.pRow(r) + gauss() * pl.sigma);
+      pl.tx = pl.hoopX + pl.miss;
+      pl.state = "walk";
+    } else if (pl.state === "walk") {
+      pl.walkT = (pl.walkT || 0) + dt;
+      if (HW_ROWS[pl.row].slide) {
+        // The good CPU leads the moving hoop; the others aim where it is now. A hoop
+        // sliding off the edge is swapped for the next one coming in, so the target
+        // is always somewhere they can stand.
+        const lead = pl.predict ? (pl.want / HW_FILL + .55) * this.W * .11 : 0;
+        const ok = this.hoopsIn(pl.row).filter(x => x + lead > 30 && x + lead < this.pw - 20);
+        const h = ok.reduce((a, x) => Math.abs(x - pl.hoopX) < Math.abs(a - pl.hoopX) ? x : a, ok[0]);
+        pl.hoopX = h; pl.tx = h + lead + pl.miss;
+      }
+      pl.tx = Math.max(24, Math.min(this.pw - 10, pl.tx));
+      if (Math.abs(pl.x - pl.tx) < 6 && this.running) { pl.state = "charge"; pl.charging = true; pl.p = 0; pl.dir = 1; pl.walkT = 0; }
+      else if (pl.walkT > 3) { pl.state = "think"; pl.wait = .2; pl.walkT = 0; } // never get stuck
+    } else if (pl.state === "charge") {
+      if (!this.running) { pl.charging = false; pl.state = "think"; return; }
+      if (pl.p >= pl.want || pl.dir < 0) { this.shoot(pl); pl.state = "think"; pl.wait = .25 + Math.random() * .5; }
+    }
+  }
+  update(dt) {
+    this.clock += dt;
+    this.slide = this.slideAt(dt) ; // gold row drifts to the right and wraps around
+    this.fx.update(dt);
+    this.shake = Math.max(0, this.shake - dt);
+    this.sparks.forEach(s => { s.t += dt; s.vy += 500 * dt; s.x += s.vx * dt; s.y += s.vy * dt; });
+    this.sparks = this.sparks.filter(s => s.t < .7);
+    if (this.wob) { this.wob.forEach(w => w.t += dt); this.wob = this.wob.filter(w => w.t < .6); }
+    if (this.running) {
+      this.time -= dt;
+      if (this.time <= 0) { this.time = 0; this.running = false; this.players.forEach(p => p.charging = false); }
+    }
+    for (const pl of this.players) {
+      if (!pl.you) this.thinkCPU(pl, dt);
+      const walk = this.W * (pl.you ? 2.2 : .5) * dt;
+      pl.tx = Math.max(24, Math.min(this.pw - 10, pl.tx));
+      pl.x += Math.max(-walk, Math.min(walk, pl.tx - pl.x));
+      if (pl.charging) {
+        pl.p += pl.dir * dt / HW_FILL;
+        if (pl.p >= 1) { pl.p = 1; pl.dir = -1; }
+        if (pl.p <= 0) { pl.p = 0; pl.dir = 1; }
+      }
+      pl.cool = Math.max(0, pl.cool - dt);
+      pl.jump = Math.max(0, pl.jump - dt * 3);
+      if (pl.ball) this.updateBall(pl, dt);
+    }
+    // Time's up: wait for the last balls, show the standings, then finish.
+    if (!this.running && this.time === 0 && !this.players.some(p => p.ball)) {
+      if (this.endT === undefined) { this.endT = 0; sfx("coin"); }
+      this.endT += dt;
+      if (this.endT > 3) this.done = true;
+    }
+  }
+  standings() { return this.players.slice().sort((a, b) => b.score - a.score || (b.you ? 1 : 0) - (a.you ? 1 : 0)); }
+  drawBricks() {
+    const { W } = this, c = document.createElement("canvas"), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const h = this.floorY - this.wallTop + 10;
+    c.width = W * dpr; c.height = h * dpr;
+    const x = c.getContext("2d"); x.scale(dpr, dpr);
+    x.fillStyle = "#b9654a"; x.fillRect(0, 0, W, h);
+    const bh = 15, bw = 34;
+    for (let r = 0, y = 0; y < h; r++, y += bh) {
+      for (let cx = r % 2 ? -bw / 2 : 0; cx < W; cx += bw) {
+        const shade = ["#c4704f", "#b45f44", "#cf7b57", "#a95a41"][(r * 7 + Math.round(cx)) % 4];
+        x.fillStyle = shade; x.fillRect(cx + 1.5, y + 1.5, bw - 3, bh - 3);
+      }
+    }
+    x.fillStyle = "rgba(0,0,0,.18)"; x.fillRect(0, h - 10, W, 10);
+    this.bricks = c;
+  }
+  drawShooter(ctx, pl) {
+    const w = this.sh * 100 / 110, h = this.sh;
+    const crouch = pl.charging ? .06 + pl.p * .05 : 0;
+    const lift = Math.sin(pl.jump * Math.PI) * this.sh * .16;
+    ctx.fillStyle = "rgba(0,0,0,.22)";
+    ctx.beginPath(); ctx.ellipse(pl.x, this.feetY - 2, w * .32 * (1 - lift / this.sh), 7, 0, 0, 7); ctx.fill();
+    if (pl.you) { ctx.strokeStyle = "#ffc800"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(pl.x, this.feetY - 2, w * .38, 10, 0, 0, 7); ctx.stroke(); }
+    const img = pl.jump > 0 ? pl.img.shoot : pl.img.hold;
+    if (img.complete && img.naturalWidth) {
+      const hh = h * (1 - crouch);
+      ctx.drawImage(img, pl.x - w / 2, this.feetY - hh - lift, w, hh);
+    }
+    // the ball in hand, in the player's color, while waiting to shoot
+    if (!pl.ball && pl.cool === 0) drawTintBall(ctx, pl.x + w * .2, this.feetY - h * (.5 - crouch) - lift, this.sh * .1, pl.color, 0);
+    if (pl.you) drawText(ctx, "YOU", pl.x, this.feetY - h * .84 - lift, 18, "#ffc800");
+  }
+  drawHoopAt(ctx, x, y, r, part) {
+    const w = this.hw, rx = w / 2, ry = w * .14;
+    const wob = (this.wob || []).filter(o => o.r === r && Math.abs(o.x - x) < 2).reduce((a, o) => a + Math.sin(o.t * 40) * (1 - o.t / .6) * 4 * o.k, 0);
+    const rim = HW_ROWS[r].rim;
+    if (part === "back") {
+      const bw = w * 1.25, bh = w * .8;
+      ctx.fillStyle = "#f8fafc"; ctx.strokeStyle = "#334155"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.roundRect(x - bw / 2, y - bh + w * .05, bw, bh, 9); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#4f46e5"; ctx.lineWidth = 2.5; ctx.strokeRect(x - w * .27, y - w * .45, w * .54, w * .38);
+      ctx.strokeStyle = rim; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.ellipse(x, y + wob, rx, ry, 0, Math.PI, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 1.6;
+      const nb = w * .5, depth = w * .5;
+      for (let i = 0; i <= 6; i++) {
+        const t = i / 6; ctx.beginPath(); ctx.moveTo(x - rx + t * w, y + wob); ctx.lineTo(x - nb / 2 + t * nb + wob, y + depth); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.ellipse(x, y + depth * .5, rx * .75, ry * .7, 0, 0, Math.PI); ctx.stroke();
+      ctx.strokeStyle = rim; ctx.lineWidth = 4.5;
+      if (HW_ROWS[r].slide) { ctx.shadowColor = "#ffe066"; ctx.shadowBlur = 8; }
+      ctx.beginPath(); ctx.ellipse(x, y + wob, rx, ry, 0, 0, Math.PI); ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+  draw(ctx) {
+    const { W, H } = this;
+    ctx.save();
+    if (this.shake) ctx.translate((Math.random() - .5) * 10 * this.shake / .25, (Math.random() - .5) * 8 * this.shake / .25);
+    // sky, wall, court
+    const sky = ctx.createLinearGradient(0, 0, 0, this.wallTop);
+    sky.addColorStop(0, "#38bdf8"); sky.addColorStop(1, "#bae6fd");
+    ctx.fillStyle = sky; ctx.fillRect(-20, -20, W + 40, this.wallTop + 20);
+    if (!this.bricks) this.drawBricks();
+    ctx.drawImage(this.bricks, 0, this.wallTop, W, this.floorY - this.wallTop + 10);
+    ctx.fillStyle = "#9a4a35"; ctx.fillRect(0, this.wallTop - 8, W, 10);
+    const court = ctx.createLinearGradient(0, this.floorY, 0, H);
+    court.addColorStop(0, "#64748b"); court.addColorStop(1, "#94a3b8");
+    ctx.fillStyle = court; ctx.fillRect(-20, this.floorY + 10, W + 40, H);
+    ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(W * .3, this.floorY + 10); ctx.lineTo(W * .26, H); ctx.moveTo(W * .7, this.floorY + 10); ctx.lineTo(W * .74, H); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(W / 2, this.floorY + 10, W * .46, (H - this.floorY) * .75, 0, 0, Math.PI); ctx.stroke();
+    // aim line: where your ball will go if you let go now
+    const m = this.me;
+    if (m.charging) {
+      const y = this.yOf(m.p), on = HW_ROWS.some((_, r) => Math.abs(m.p - this.pRow(r)) <= HW_TOL);
+      ctx.setLineDash([4, 7]); ctx.strokeStyle = on ? "#58cc02" : "rgba(255,255,255,.8)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(m.x, this.launchY); ctx.lineTo(m.x, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = on ? "#58cc02" : "#fff"; ctx.beginPath(); ctx.arc(m.x, y, 6, 0, 7); ctx.fill();
+    }
+    // hoops (back), balls going in, hoop fronts, other balls
+    HW_ROWS.forEach((_, r) => this.hoopsIn(r).forEach(x => this.drawHoopAt(ctx, x, this.rowY[r], r, "back")));
+    for (const pl of this.players) if (pl.ball && pl.ball.phase === "in") drawTintBall(ctx, pl.ball.x, pl.ball.y, pl.ball.r, pl.color, pl.ball.spin);
+    HW_ROWS.forEach((_, r) => this.hoopsIn(r).forEach(x => this.drawHoopAt(ctx, x, this.rowY[r], r, "front")));
+    for (const pl of this.players) if (pl.ball && pl.ball.phase !== "in") drawTintBall(ctx, pl.ball.x, pl.ball.y, pl.ball.r, pl.color, pl.ball.spin);
+    // shooters, back to front
+    this.players.slice().sort((a, b) => (a.you ? 1 : 0) - (b.you ? 1 : 0)).forEach(pl => this.drawShooter(ctx, pl));
+    for (const s of this.sparks) { ctx.globalAlpha = 1 - s.t / .7; ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // the power meter up the right side, lined up with the rows
+    const mx = W - 22, top = this.topY, bot = this.launchY;
+    ctx.fillStyle = "rgba(15,23,42,.75)"; ctx.beginPath(); ctx.roundRect(mx - 11, top - 6, 22, bot - top + 12, 11); ctx.fill();
+    HW_ROWS.forEach((row, r) => {
+      const a = this.yOf(this.pRow(r) + HW_TOL), b = this.yOf(this.pRow(r) - HW_TOL);
+      ctx.fillStyle = row.slide ? "#f5b800" : "#58cc02"; ctx.fillRect(mx - 7, a, 14, b - a);
+      drawText(ctx, "+" + row.pts, mx, (a + b) / 2, 13, "#fff");
+    });
+    if (m.charging) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#1f2937"; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(mx - 15, this.yOf(m.p) - 4, 30, 8, 4); ctx.fill(); ctx.stroke(); }
+    // scoreboard
+    const sw = (W - 16) / 4;
+    this.players.forEach((pl, i) => {
+      const x = 8 + i * sw;
+      ctx.fillStyle = pl.you ? "rgba(255,200,0,.92)" : "rgba(15,23,42,.72)";
+      ctx.beginPath(); ctx.roundRect(x + 2, 80, sw - 4, 34, 10); ctx.fill();
+      drawTintBall(ctx, x + 16, 97, 8, pl.color);
+      drawText(ctx, `${pl.name} ${pl.score}`, x + 30, 97, 15, pl.you ? "#1f2937" : "#fff", "left");
+    });
+    if (this.running && this.clock < 4 && !m.charging) drawText(ctx, "HOLD, then let go!", W / 2, this.floorY + 34, 24, "#fff");
+    this.fx.draw(ctx);
+    ctx.restore();
+    if (this.endT !== undefined) {
+      ctx.fillStyle = "rgba(15,23,42,.78)"; ctx.fillRect(0, 0, W, H);
+      drawText(ctx, "FINAL SCORES", W / 2, H * .25, 30, "#ffc800");
+      this.standings().forEach((pl, i) => {
+        const y = H * .34 + i * 52, k = Math.min(1, Math.max(0, this.endT * 3 - i * .4));
+        ctx.globalAlpha = k;
+        drawText(ctx, ["1st", "2nd", "3rd", "4th"][i], W * .22, y, 26, i === 0 ? "#ffc800" : "#fff");
+        drawTintBall(ctx, W * .38, y, 12, pl.color);
+        drawText(ctx, pl.name, W * .46, y, 26, pl.you ? "#ffc800" : "#fff", "left");
+        drawText(ctx, String(pl.score), W * .84, y, 26, "#fff");
+      });
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+// A rough bell curve, for CPU timing mistakes.
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / .5;
+
 // ---------- The frame every game runs in ----------
 let miniCoach = null;
 let miniGame = null;
@@ -603,6 +953,7 @@ async function playMini(id) {
   const prevBest = save.best[id];
   const better = won && (prevBest === undefined || (def.lowerIsBetter ? score < prevBest : score > prevBest));
   if (better) save.best[id] = score;
+  const improved = medal > (save.medals[id] || 0);
   save.medals[id] = Math.max(save.medals[id] || 0, medal);
   const xp = MEDAL_XP[medal];
   addXP(xp);
@@ -625,5 +976,5 @@ async function playMini(id) {
   const choice = await Promise.race([waitForButton(again).then(() => "again"), waitForButton(cont).then(() => "continue")]);
   cancelAnimationFrame(raf);
   if (myRun !== RUN) throw ABORT;
-  return { medal, score, xp, newDay, again: choice === "again" };
+  return { medal, improved, score, xp, newDay, again: choice === "again" };
 }

@@ -7,6 +7,7 @@ const show = id => SCREENS.forEach(s => $("#" + s).classList.toggle("hidden", s 
 const UNITS = [
   { title: "Unit 1: The 5-Out", sub: "Outdoor court: spots, cuts and filling", lessons: [0, 1, 2], color: "#f97316", dark: "#c2410c", court: "park" },
   { title: "Unit 2: Read the Defense", sub: "Eagles Gym: give and go, attack, big game", lessons: [3, 4, 5], color: "#1e3a8a", dark: "#172554", court: "gym" },
+  { title: "Unit 3: Practice Court", sub: "Review: rotations, cuts, corners and coaching", lessons: [6, 7, 8, 9, 10], color: "#16a34a", dark: "#166534", court: "park" },
 ];
 const unitOf = i => UNITS.find(u => u.lessons.includes(i));
 const ZIGZAG = [0, -70, -100, -70, 0, 70, 100, 70];
@@ -21,6 +22,8 @@ const TIPS = [
 const UNIT_ART = [
   `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M30 46V14" stroke="#1e293b" stroke-width="3.5"/><rect x="12" y="5" width="30" height="20" rx="2" fill="#fff" stroke="#1e293b" stroke-width="2.5"/><rect x="20" y="12" width="14" height="9" fill="none" stroke="#ef4444" stroke-width="2"/><ellipse cx="24" cy="25" rx="8" ry="2.5" fill="none" stroke="#ea580c" stroke-width="3"/><path d="M17 26l3 9M24 27v9M31 26l-3 9" stroke="#fff" stroke-width="1.6"/></svg>`,
   EAGLE_SVG.replace('viewBox="0 0 100 110"', 'viewBox="24 10 52 54"'),
+  // a coach's clipboard with a play drawn on it
+  `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="9" y="7" width="30" height="38" rx="3" fill="#a16207" stroke="#1e293b" stroke-width="2.5"/><rect x="13" y="12" width="22" height="29" rx="1.5" fill="#fff"/><rect x="18" y="4" width="12" height="6" rx="2" fill="#94a3b8" stroke="#1e293b" stroke-width="2"/><path d="M18 34 Q22 22 30 20" fill="none" stroke="#1e3a8a" stroke-width="2" stroke-dasharray="2 2.5"/><path d="M27 17l3.5 3-4 2" fill="none" stroke="#1e3a8a" stroke-width="2"/><path d="M16 17l4 4M20 17l-4 4" stroke="#ef4444" stroke-width="2"/><circle cx="18" cy="35" r="2.6" fill="#f97316"/></svg>`,
 ];
 
 let homeCoach, rewardCoach;
@@ -239,10 +242,16 @@ async function lessonComplete(i) {
   addXP(xp);
   challenge("lesson"); challenge("stars", stars);
   const day = touchStreak();
-  // The lesson's card pack (3 stars improves the odds). The very first pack has a
-  // rare or better, and finishing the Big Game the first time adds a legendary.
-  const pack = makePack("Lesson card pack!", 2, stars === 3 ? "good" : "normal",
-    [null, save.packs === 0 ? "rare" : i === LESSONS.length - 1 && firstTime ? "legendary" : null]);
+  // The lesson's card pack (3 stars improves the odds). Finishing a lesson the first
+  // time pays 2 cards. Practicing one again pays a single card, and only the first
+  // practice of the day, so cards stay special. The very first pack has a rare or
+  // better, and finishing the Big Game the first time adds a legendary.
+  const practiceCard = !firstTime && save.practiceDay !== today();
+  if (practiceCard) { save.practiceDay = today(); persist(); }
+  const pack = firstTime
+    ? makePack("Lesson card pack!", 2, stars === 3 ? "good" : "normal",
+      [null, save.packs === 0 ? "rare" : LESSONS[i].legend ? "legendary" : null])
+    : practiceCard ? makePack("Practice card!", 1, stars === 3 ? "good" : "normal") : null;
   await lessonRewards({ i, stars, acc, xp, parts, perfect, right: stats.firstTry, asked: stats.questions, bestCombo: stats.bestCombo, firstTime, pack, day });
   reward(i, firstTime);
 }
@@ -293,7 +302,8 @@ async function startMini(id) {
       show("mini");
       const res = await playMini(id);
       const odds = ["normal", "normal", "good", "great"][res.medal];
-      await showPacks([res.medal ? makePack(`${medalIcon(res.medal, "inline")} Medal card!`, 1, odds) : null, challengePack()]);
+      // A medal card only for a better medal than this game has ever given you.
+      await showPacks([res.improved ? makePack(`${medalIcon(res.medal, "inline")} New medal card!`, 1, odds) : null, challengePack()]);
       if (res.newDay) await streakScreen(res.newDay);
       if (!res.again) break;
       RUN++;

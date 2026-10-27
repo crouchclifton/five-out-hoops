@@ -12,12 +12,12 @@ Based on Coach Russ's video "5-Out Motion Offense: A Complete Guide for Coaches"
 - `js/core.js`: helpers, sound and voice, players and their save data (in localStorage, on the phone only), the streak and Rest Day Passes.
 - `js/icons.js`: every icon, drawn in SVG (no emoji), in the same style as Coach Bounce and the cards.
 - `js/coach.js`: Coach Bounce, the animated mascot.
-- `js/lessons.js`: the court, the 5-Out rotation and the six lessons.
-- `js/minigames.js`: the four bonus games (Swish Shot, Pass Pop, Free Throw Frenzy, Dribble Dash).
+- `js/lessons.js`: the court, the 5-Out rotation and the eleven lessons (Unit 3 is review). Teaching stays inside the first 6:10 of the video.
+- `js/minigames.js`: the five bonus games (Swish Shot, Pass Pop, Free Throw Frenzy, Dribble Dash, Hoop Wall with three CPU players).
 - `js/cast.js`: the characters beside the lesson path (an original cartoon Eagles mascot, a ref, Eagles players).
 - `js/rewards.js`: rewards one screen at a time (stars, XP, card pack, streak), the daily Skills Challenges, streak milestones and gym bags.
 - `js/profiles.js`: "Who's playing?" and "Make your player". A player is a face, jersey and number, never a name.
-- `js/cards.js`: the basketball cards: 24 original cartoon players (all boys, made-up names, no real NBA players), card packs and the Card Binder.
+- `js/cards.js`: the basketball cards: 48 original cartoon players (all boys, made-up names, no real NBA players), card packs and the Card Binder.
 - `js/app.js`: the lesson path, rewards, coach notes, and the home screen app setup.
 - `sw.js`, `manifest.webmanifest`, `icons/`: home screen app (PWA) and offline play. `sw.js` carries a build stamp; `node tools/stamp.mjs` updates it (make-voice runs it too). Run it before committing any code change, or phones keep the old saved copy.
 

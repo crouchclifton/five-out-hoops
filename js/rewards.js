@@ -51,7 +51,7 @@ function challengePack() {
   const d = dailyChallenges();
   if (d.paid || !d.ids.every(challengeDone)) return null;
   d.paid = true; persist();
-  return makePack("Skills Challenges complete!", 3, "good");
+  return makePack("Skills Challenges complete!", 2, "good");
 }
 // The list of today's three, for the home screen and the XP screen.
 function challengeList(parent, { speakRows = true } = {}) {
@@ -167,7 +167,7 @@ async function streakScreen(day) {
 
 // ---------- Gym bags on the path ----------
 // A bag sits on the path after these lessons. Finishing the lesson unlocks it; it opens once.
-const BAGS = { 1: "u1", 4: "u2" };
+const BAGS = { 1: "u1", 4: "u2", 8: "u3" };
 async function openBag(id) {
   save.bags[id] = true; persist();
   await showPacks([makePack("You found a gym bag!", 3, "good", [], "bag")]);

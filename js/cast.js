@@ -35,5 +35,8 @@ const PATH_CAST = [
   { lesson: 3, look: { skin: 4, hair: "fade", hc: "#111827", ...EAGLES_LOOK, num: 11, pose: "pass" }, says: "Give and go!" },
   { lesson: 4, look: { skin: 0, hair: "curly", hc: "#a16207", ...EAGLES_LOOK, num: 7, pose: "shoot" }, says: "Attack!" },
   { lesson: 5, look: { skin: 5, hair: "afro", hc: "#111827", ...EAGLES_LOOK, num: 33, pose: "wave" }, says: "Big game!" },
+  { lesson: 6, look: { skin: 2, hair: "braids", hc: "#111827", ...EAGLES_LOOK, num: 15, pose: "pass" }, says: "Where do I go?" },
+  { lesson: 8, look: { skin: 0, hair: "buzz", hc: "#78350f", jersey: "#ffffff", trim: "#111827", ref: true, pose: "whistle" }, says: "Pass up from the corner!" },
+  { lesson: 10, kind: "eagle", says: "Lightning fast!" },
 ];
 function castSVG(c) { return c.kind === "eagle" ? EAGLE_SVG : playerSVG({ look: c.look }); }

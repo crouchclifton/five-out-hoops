@@ -83,6 +83,81 @@ const CARDS = [
   { id: "finn", name: "Finn Fakeout", nick: "Pump Fake Finn", rarity: "common", move: "Pump Fake",
     stats: [66, 58, 60, 58], tip: "If your defender jumps at a fake, drive past them to the hoop!",
     look: { skin: 0, hair: "spiky", hc: "#c2410c", jersey: "#0d9488", trim: "#ffffff", num: 18, pose: "shoot" } },
+  // Set 2 (October 27, 2026): 24 more, so a player who has every card from set 1
+  // still has plenty to find. Tips stay inside the part of Coach Russ's video the
+  // team learns (setup, the 3 rules, the 4 rotations) or are basic skills.
+  { id: "blaze", name: "Blaze Hollister", nick: "The Comet", rarity: "legendary", move: "Coast-to-Coast",
+    stats: [88, 84, 98, 80], tip: "Give and go! Pass, cut in front of your defender, and get the ball right back.",
+    look: { skin: 2, hair: "spiky", hc: "#111827", jersey: "#dc2626", trim: "#fde68a", num: 9, pose: "dunk", band: true } },
+  { id: "titan", name: "Titan Brooks", nick: "The Mountain", rarity: "legendary", move: "Two-Hand Hammer",
+    stats: [80, 78, 72, 98], tip: "Rule #3: when a spot opens up, the teammate next to it fills it. Every time!",
+    look: { skin: 5, hair: "afro", hc: "#111827", jersey: "#111827", trim: "#f97316", num: 55, pose: "block" } },
+  { id: "jett", name: "Jett Marlowe", nick: "Mister Smooth", rarity: "legendary", move: "Fadeaway",
+    stats: [98, 88, 84, 72], tip: "All five players start outside the big line: 1 top, 2 wings and 2 corners.",
+    look: { skin: 3, hair: "fade", hc: "#111827", jersey: "#7c3aed", trim: "#facc15", num: 7, pose: "shoot" } },
+  { id: "dante", name: "Dante Swoop", nick: "Hawkeye", rarity: "epic", move: "Bullet Pass",
+    stats: [72, 96, 80, 70], tip: "Top to wing pass? Cut to the hoop, then run to the opposite corner.",
+    look: { skin: 4, hair: "short", hc: "#111827", jersey: "#0369a1", trim: "#ffffff", num: 12, pose: "pass" } },
+  { id: "eli", name: "Eli Vortex", nick: "Spin Cycle", rarity: "epic", move: "Double Spin",
+    stats: [82, 74, 92, 68], tip: "Before you cut, take a step the other way. Then cut in front of your defender!",
+    look: { skin: 0, hair: "curly", hc: "#a16207", jersey: "#be123c", trim: "#ffffff", num: 23, pose: "dribble" } },
+  { id: "marco", name: "Marco Flash", nick: "Flashbulb", rarity: "epic", move: "Floater",
+    stats: [88, 70, 86, 66], tip: "Corner to wing pass? The passer cuts, then comes right back to the same corner.",
+    look: { skin: 1, hair: "short", hc: "#5b3a1e", jersey: "#f59e0b", trim: "#1e3a8a", num: 8, pose: "shoot" } },
+  { id: "cruz", name: "Cruz Ironside", nick: "Brick Wall", rarity: "epic", move: "Taking the Charge",
+    stats: [62, 70, 78, 95], tip: "Rule #1: look at the hoop first. Attack the basket when you can!",
+    look: { skin: 2, hair: "buzz", hc: "#111827", jersey: "#475569", trim: "#facc15", num: 44, pose: "hold" } },
+  { id: "rio", name: "Rio Rainmaker", nick: "Splash", rarity: "epic", move: "Step-Back Three",
+    stats: [94, 72, 78, 66], tip: "Wing to top pass? The passer cuts, then fills the corner on the same side.",
+    look: { skin: 4, hair: "locs", hc: "#111827", jersey: "#06b6d4", trim: "#1e293b", num: 30, pose: "shoot" } },
+  { id: "jace", name: "Jace Hustler", nick: "Motor", rarity: "rare", move: "Full Court Sprint",
+    stats: [64, 70, 88, 80], tip: "Keep moving! A team that moves is hard to guard.",
+    look: { skin: 3, hair: "braids", hc: "#111827", jersey: "#15803d", trim: "#fde68a", num: 24, pose: "dribble" } },
+  { id: "wes", name: "Wes Windmill", nick: "Propeller", rarity: "rare", move: "Windmill Layup",
+    stats: [78, 64, 84, 66], tip: "Wing to corner pass? Cut to the hoop, then run to the opposite corner.",
+    look: { skin: 1, hair: "spiky", hc: "#facc15", jersey: "#4338ca", trim: "#ffffff", num: 32, pose: "dunk" } },
+  { id: "cal", name: "Cal Coolhand", nick: "Ice", rarity: "rare", move: "Calm Free Throw",
+    stats: [86, 68, 62, 64], tip: "Stay calm. Look at the defense before you pass.",
+    look: { skin: 0, hair: "buzz", hc: "#78350f", jersey: "#38bdf8", trim: "#1e3a8a", num: 1, pose: "shoot" } },
+  { id: "bo", name: "Bo Bridges", nick: "The Connector", rarity: "rare", move: "Lob Pass",
+    stats: [64, 86, 70, 66], tip: "Pass to a teammate next to you, never across the whole court.",
+    look: { skin: 5, hair: "short", hc: "#111827", jersey: "#a21caf", trim: "#ffffff", num: 35, pose: "pass" } },
+  { id: "dex", name: "Dex Dribbleton", nick: "Yo-Yo", rarity: "rare", move: "Between the Legs",
+    stats: [70, 72, 86, 62], tip: "Dribble with your eyes up, so you can see your teammates.",
+    look: { skin: 2, hair: "fade", hc: "#111827", jersey: "#ea580c", trim: "#111827", num: 27, pose: "dribble", band: true } },
+  { id: "remy", name: "Remy Reach", nick: "Vacuum", rarity: "rare", move: "Putback",
+    stats: [66, 60, 72, 86], tip: "Cutters, hands up! Be ready to catch the pass back.",
+    look: { skin: 4, hair: "curly", hc: "#111827", jersey: "#57534e", trim: "#fb923c", num: 45, pose: "block" } },
+  { id: "luca", name: "Luca Lane", nick: "Highway", rarity: "rare", move: "Lane Drive",
+    stats: [72, 70, 88, 64], tip: "No defender in the way? Rule #1 says attack the basket!",
+    look: { skin: 0, hair: "short", hc: "#111827", jersey: "#0f172a", trim: "#22d3ee", num: 29, pose: "dribble" } },
+  { id: "ned", name: "Ned Nifty", nick: "Sure Hands", rarity: "common", move: "Two-Hand Catch",
+    stats: [56, 70, 60, 60], tip: "Catch with two hands, then look at the hoop.",
+    look: { skin: 1, hair: "curly", hc: "#78350f", jersey: "#84cc16", trim: "#1f2937", num: 28, pose: "hold" } },
+  { id: "toby", name: "Toby Tiptoe", nick: "Sneaky", rarity: "common", move: "Back Pedal",
+    stats: [56, 62, 70, 66], tip: "The wings are on the sides of the court, like a bird's wings.",
+    look: { skin: 3, hair: "afro", hc: "#111827", jersey: "#f43f5e", trim: "#ffffff", num: 36, pose: "hold" } },
+  { id: "gabe", name: "Gabe Gusto", nick: "Spark", rarity: "common", move: "Hustle Play",
+    stats: [58, 62, 72, 64], tip: "Cheer for your teammates. Good teams talk!",
+    look: { skin: 2, hair: "spiky", hc: "#111827", jersey: "#facc15", trim: "#1e3a8a", num: 37, pose: "wave" } },
+  { id: "arlo", name: "Arlo Archway", nick: "High Arc", rarity: "common", move: "Set Shot",
+    stats: [70, 56, 56, 58], tip: "The top spot is out front, in the middle of the court.",
+    look: { skin: 5, hair: "buzz", hc: "#111827", jersey: "#2dd4bf", trim: "#134e4a", num: 38, pose: "shoot" } },
+  { id: "kip", name: "Kip Sideline", nick: "Stay Wide", rarity: "common", move: "Inbound Pass",
+    stats: [58, 70, 60, 58], tip: "Corners are down low, by the end line. Stay wide!",
+    look: { skin: 0, hair: "fade", hc: "#a16207", jersey: "#e11d48", trim: "#ffffff", num: 39, pose: "pass" } },
+  { id: "bruno", name: "Bruno Bigfoot", nick: "Tank", rarity: "common", move: "Two-Foot Jump",
+    stats: [56, 56, 62, 74], tip: "When a teammate cuts, look for the open spot next to you.",
+    look: { skin: 1, hair: "short", hc: "#111827", jersey: "#92400e", trim: "#fde68a", num: 42, pose: "block" } },
+  { id: "ray", name: "Ray Ready", nick: "Triple Threat", rarity: "common", move: "Triple Threat",
+    stats: [62, 64, 62, 60], tip: "When you catch the ball, face the hoop. You can shoot, pass or drive.",
+    look: { skin: 4, hair: "fade", hc: "#111827", jersey: "#0284c7", trim: "#ffffff", num: 43, pose: "hold" } },
+  { id: "otis", name: "Otis Outlet", nick: "Quick Hands", rarity: "common", move: "Outlet Pass",
+    stats: [56, 72, 64, 58], tip: "Pass and move! Standing still makes it easy for the defense.",
+    look: { skin: 3, hair: "locs", hc: "#111827", jersey: "#65a30d", trim: "#ffffff", num: 46, pose: "pass" } },
+  { id: "mack", name: "Mack Motion", nick: "Never Still", rarity: "common", move: "Jab Step",
+    stats: [60, 60, 70, 60], tip: "Ball in the corner? Pass it up to the wing.",
+    look: { skin: 5, hair: "braids", hc: "#111827", jersey: "#c2410c", trim: "#ffffff", num: 47, pose: "dribble" } },
 ];
 const RARITIES = ["common", "rare", "epic", "legendary"];
 const RARITY = {
@@ -90,8 +165,10 @@ const RARITY = {
   epic: { label: "Epic", xp: 20 }, legendary: { label: "Legendary", xp: 40 },
 };
 // Chance of each rarity per card, in percent: common, rare, epic, legendary.
-const ODDS = { normal: [62, 27, 9, 2], good: [45, 33, 16, 6], great: [28, 36, 26, 10] };
-const PITY = 15; // a legendary is guaranteed after this many cards without one
+// Set 2 made these a little stingier (October 27, 2026): Clifton's son had nearly
+// every set-1 card within a few days.
+const ODDS = { normal: [66, 25, 7, 2], good: [50, 32, 14, 4], great: [32, 36, 24, 8] };
+const PITY = 30; // a legendary is guaranteed after this many cards without one
 const STREAK_PACKS = [3, 7, 14, 30, 60, 100];
 const STAT_NAMES = ["Shooting", "Passing", "Speed", "Defense"];
 const SKINS = ["#f9d7b9", "#f1c27d", "#e0ac69", "#c68642", "#8d5524", "#5c3a1e"];
@@ -223,10 +300,10 @@ function drawCard(odds, force) {
   const rarity = force || rollRarity(odds);
   const pool = CARDS.filter(c => c.rarity === rarity);
   const fresh = pool.filter(c => !save.cards[c.id]);
-  // A forced legendary is always a new one if any are left. Otherwise one reroll
-  // leans gently toward cards the player doesn't have yet.
-  let c = force === "legendary" && fresh.length ? pick(fresh) : pick(pool);
-  if (save.cards[c.id] && !force) c = pick(pool);
+  // A forced legendary is always a new one if any are left. Otherwise it is a fair
+  // draw: duplicates get more likely as the binder fills, so the last few cards
+  // take real work to find. (Set 1 rerolled toward new cards, which made it too quick.)
+  const c = force === "legendary" && fresh.length ? pick(fresh) : pick(pool);
   save.sinceLegend = rarity === "legendary" ? 0 : save.sinceLegend + 1;
   const dup = !!save.cards[c.id];
   save.cards[c.id] = (save.cards[c.id] || 0) + 1;

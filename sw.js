@@ -4,7 +4,7 @@
 // Sound files: cache first, since a clip's name changes whenever its words do.
 // BUILD is rewritten by tools/stamp.mjs whenever a game file changes. A new BUILD
 // makes phones install a fresh cache (with every new voice clip) and drop the old one.
-const BUILD = "b2a80e95c8";
+const BUILD = "2607f65daa";
 const CACHE = "five-out-hoops-" + BUILD;
 const SHELL = [
   "./", "index.html", "css/style.css", "manifest.webmanifest",

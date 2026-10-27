@@ -1,4 +1,12 @@
-# Round 4 (proposed October 22, 2026): Hoop Wall bonus game. Paused, waiting on Clifton
+# Round 5 (October 27, 2026): done
+
+Clifton: "Work on the updates" (Hoop Wall), plus more lessons because his son finished them all quickly ("still from the first 6:10 of the video, but maybe review or broken down further or taught in a different way"), plus more cards because his son had only 3 left, "possibly make them harder to collect or don't give them out so often or so many at a time."
+
+- **Hoop Wall** built as planned below, on Lesson 5. Defaults taken on the three open questions: top row +3, the name Hoop Wall, CPUs only race for points. CPU players are Sam, Zeke and Rex from the cards. Medal goals 14 / 22 / 30, set from a headless simulation: CPUs score about 12 / 16 / 21, a sloppy shooter about 18, a steady one about 25, a sharp one about 33.
+- **Unit 3: Practice Court**, five review lessons (7 to 11): Where Do I Go? (where the passer ends up after each of the 4 passes), Cut in Front (step away, then cut in front, 3:05), Corner Smarts (pass up from the corner, come back to the same corner, 5:06), Spot the Mistake (be the coach: which rule did they break?), Lightning Round (mixed, faster, no spot names, a point per read). A third gym bag sits after lesson 9. The backdoor cut (3:25) is still left out.
+- **Cards**: 24 more (48 total), tips inside the first 6:10 or basic skills. Rarer: a lesson pays 2 cards only the first time; practicing pays 1 card, once a day; a medal card only for a better medal than that game ever gave; Skills Challenge pack 3 cards to 2; no more lean toward new cards (duplicates get more common as the binder fills); legendary pity 15 to 30; slightly lower odds.
+
+# Round 4 (proposed October 22, 2026): Hoop Wall bonus game. Built in Round 5
 
 Based on two screenshots Clifton sent from a Mario Party mini game (the YouTube video itself was not watched, to save tokens). Nothing is built yet.
 
